@@ -1,7 +1,7 @@
 'use client'
 export const dynamic = 'force-dynamic'
 import { useEffect, useState, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { getSupabase } from '@/lib/supabase'
 import { formatBRL, formatNum, formatPercent } from '@/lib/utils'
 import KPICard from '@/components/KPICard'
 import ConversionCard from '@/components/ConversionCard'
@@ -29,10 +29,10 @@ export default function FunilPage() {
     setLoading(true)
     try {
       const [kpisRes, pagesRes, timelineRes, lancRes] = await Promise.all([
-        supabase.rpc('fn_funil_kpis', { p_lancamento: lancamento }),
-        supabase.rpc('fn_leads_by_pagina', { p_lancamento: lancamento, p_limit: 8 }),
-        supabase.rpc('fn_leads_over_time', { p_lancamento: lancamento, p_days: 60 }),
-        supabase.rpc('fn_lancamentos'),
+        getSupabase().rpc('fn_funil_kpis', { p_lancamento: lancamento }),
+        getSupabase().rpc('fn_leads_by_pagina', { p_lancamento: lancamento, p_limit: 8 }),
+        getSupabase().rpc('fn_leads_over_time', { p_lancamento: lancamento, p_days: 60 }),
+        getSupabase().rpc('fn_lancamentos'),
       ])
       if (kpisRes.data) setKpis(kpisRes.data as FunilKPIs)
       if (pagesRes.data) setPages(pagesRes.data)

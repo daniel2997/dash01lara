@@ -1,7 +1,7 @@
 'use client'
 export const dynamic = 'force-dynamic'
 import { useEffect, useState, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { getSupabase } from '@/lib/supabase'
 import { formatBRL, formatNum } from '@/lib/utils'
 import KPICard from '@/components/KPICard'
 import TimelineChart from '@/components/TimelineChart'
@@ -81,12 +81,12 @@ export default function MidiaPage() {
     setLoading(true)
     try {
       const [kpisRes, dateRes, campRes, conjRes, adRes, lancRes] = await Promise.all([
-        supabase.rpc('fn_campaigns_kpis', { p_lancamento: lancamento }),
-        supabase.rpc('fn_campaigns_by_date', { p_lancamento: lancamento }),
-        supabase.rpc('fn_campaigns_by_campanha', { p_lancamento: lancamento }),
-        supabase.rpc('fn_campaigns_by_conjunto', { p_lancamento: lancamento }),
-        supabase.rpc('fn_campaigns_by_anuncio', { p_lancamento: lancamento }),
-        supabase.rpc('fn_lancamentos'),
+        getSupabase().rpc('fn_campaigns_kpis', { p_lancamento: lancamento }),
+        getSupabase().rpc('fn_campaigns_by_date', { p_lancamento: lancamento }),
+        getSupabase().rpc('fn_campaigns_by_campanha', { p_lancamento: lancamento }),
+        getSupabase().rpc('fn_campaigns_by_conjunto', { p_lancamento: lancamento }),
+        getSupabase().rpc('fn_campaigns_by_anuncio', { p_lancamento: lancamento }),
+        getSupabase().rpc('fn_lancamentos'),
       ])
       if (kpisRes.data) setKpis(kpisRes.data as CampaignKPIs)
       if (dateRes.data) setByDate(dateRes.data)
