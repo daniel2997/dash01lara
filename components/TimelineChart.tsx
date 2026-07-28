@@ -1,25 +1,32 @@
 'use client'
 import {
   ResponsiveContainer, ComposedChart, Line, Bar, XAxis, YAxis,
-  CartesianGrid, Tooltip, Legend
+  CartesianGrid, Tooltip, Legend,
 } from 'recharts'
+import { PanelHeading } from './SectionHeader'
 
+// Painel de gráfico — §3.7 (moldura) + §5 (cores de série).
 interface TimelineChartProps {
   data: Array<{ dia?: string; data?: string; total?: number; trafego?: number; leads?: number; gasto?: number }>
   mode?: 'leads' | 'campaigns'
 }
 
+const AXIS = 'rgba(245,255,248,0.4)'
+const GRID = 'rgba(83,166,104,0.08)'
+
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-zinc-900 border border-zinc-700 rounded-lg p-3 text-xs shadow-xl">
-      <p className="text-zinc-400 mb-2 font-medium">{label}</p>
+    <div className="bg-surface border border-strong rounded-xl p-3 text-xs">
+      <p className="text-ink-45 mb-2 font-semibold">{label}</p>
       {payload.map((p: any) => (
-        <div key={p.name} className="flex items-center gap-2 mb-1">
-          <div className="w-2 h-2 rounded-full" style={{ background: p.color }} />
-          <span className="text-zinc-300">{p.name}:</span>
-          <span className="text-white font-semibold">
-            {p.name === 'Gasto' ? `R$ ${Number(p.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : Number(p.value).toLocaleString('pt-BR')}
+        <div key={p.name} className="flex items-center gap-2 mb-1 last:mb-0">
+          <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
+          <span className="text-ink-60">{p.name}:</span>
+          <span className="text-ink font-bold">
+            {p.name === 'Gasto'
+              ? `R$ ${Number(p.value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+              : Number(p.value).toLocaleString('pt-BR')}
           </span>
         </div>
       ))}
@@ -34,56 +41,71 @@ export default function TimelineChart({ data, mode = 'leads' }: TimelineChartPro
   }))
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800/60 rounded-xl p-5">
-      <h3 className="text-sm font-semibold text-zinc-200 mb-4">
+    <section className="bg-surface border border-card rounded-[18px] p-[26px]">
+      <PanelHeading>
         {mode === 'leads' ? 'Leads ao longo do tempo' : 'Performance diária'}
-      </h3>
-      <ResponsiveContainer width="100%" height={240}>
-        <ComposedChart data={formatted} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-          <XAxis
-            dataKey="name"
-            tick={{ fill: '#71717a', fontSize: 10 }}
-            axisLine={false}
-            tickLine={false}
-            interval="preserveStartEnd"
-          />
-          <YAxis
-            yAxisId="left"
-            tick={{ fill: '#71717a', fontSize: 10 }}
-            axisLine={false}
-            tickLine={false}
-            width={40}
-          />
-          {mode === 'campaigns' && (
-            <YAxis
-              yAxisId="right"
-              orientation="right"
-              tick={{ fill: '#71717a', fontSize: 10 }}
+      </PanelHeading>
+
+      <div className="mt-5">
+        <ResponsiveContainer width="100%" height={240}>
+          <ComposedChart data={formatted} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+            <defs>
+              {/* Barras verticais: gradiente 180deg da escada de verdes (§5) */}
+              <linearGradient id="barGreen" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#53a668" />
+                <stop offset="100%" stopColor="#075743" />
+              </linearGradient>
+              {/* Dinheiro gasto mantém o coral funcional (§1.3) */}
+              <linearGradient id="barCoral" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#e79a86" />
+                <stop offset="100%" stopColor="rgba(231,154,134,0.35)" />
+              </linearGradient>
+            </defs>
+
+            <CartesianGrid strokeDasharray="3 3" stroke={GRID} vertical={false} />
+            <XAxis
+              dataKey="name"
+              tick={{ fill: AXIS, fontSize: 10 }}
               axisLine={false}
               tickLine={false}
-              width={50}
-              tickFormatter={(v) => `R$${v}`}
+              interval="preserveStartEnd"
             />
-          )}
-          <Tooltip content={<CustomTooltip />} />
-          <Legend
-            wrapperStyle={{ fontSize: 11, color: '#a1a1aa', paddingTop: 12 }}
-          />
-          {mode === 'leads' ? (
-            <>
-              <Bar yAxisId="left" dataKey="total" name="Total" fill="#6366f1" opacity={0.8} radius={[2,2,0,0]} />
-              <Line yAxisId="left" type="monotone" dataKey="trafego" name="Tráfego" stroke="#f59e0b" strokeWidth={2} dot={false} />
-              <Line yAxisId="left" type="monotone" dataKey="organico" name="Orgânico" stroke="#34d399" strokeWidth={2} dot={false} />
-            </>
-          ) : (
-            <>
-              <Bar yAxisId="right" dataKey="gasto" name="Gasto" fill="#6366f1" opacity={0.7} radius={[2,2,0,0]} />
-              <Line yAxisId="left" type="monotone" dataKey="leads" name="Leads" stroke="#f59e0b" strokeWidth={2} dot={false} />
-            </>
-          )}
-        </ComposedChart>
-      </ResponsiveContainer>
-    </div>
+            <YAxis
+              yAxisId="left"
+              tick={{ fill: AXIS, fontSize: 10 }}
+              axisLine={false}
+              tickLine={false}
+              width={40}
+            />
+            {mode === 'campaigns' && (
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                tick={{ fill: AXIS, fontSize: 10 }}
+                axisLine={false}
+                tickLine={false}
+                width={50}
+                tickFormatter={(v) => `R$${v}`}
+              />
+            )}
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(83,166,104,0.05)' }} />
+            <Legend wrapperStyle={{ fontSize: 11, color: 'rgba(245,255,248,0.6)', paddingTop: 12 }} />
+
+            {mode === 'leads' ? (
+              <>
+                <Bar yAxisId="left" dataKey="total" name="Total" fill="url(#barGreen)" radius={[8, 8, 0, 0]} />
+                <Line yAxisId="left" type="monotone" dataKey="trafego" name="Tráfego" stroke="#86e0a3" strokeWidth={2} dot={false} />
+                <Line yAxisId="left" type="monotone" dataKey="organico" name="Orgânico" stroke="#3ea98a" strokeWidth={2} dot={false} />
+              </>
+            ) : (
+              <>
+                <Bar yAxisId="right" dataKey="gasto" name="Gasto" fill="url(#barCoral)" radius={[8, 8, 0, 0]} />
+                <Line yAxisId="left" type="monotone" dataKey="leads" name="Leads" stroke="#86e0a3" strokeWidth={2} dot={false} />
+              </>
+            )}
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+    </section>
   )
 }

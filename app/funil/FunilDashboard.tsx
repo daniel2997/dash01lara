@@ -3,7 +3,12 @@ import { useEffect, useState, useCallback } from 'react'
 import { getSupabase } from '@/lib/supabase'
 import { formatBRL, formatNum } from '@/lib/utils'
 import KPICard from '@/components/KPICard'
+import Pill, { PillRow } from '@/components/Pill'
 import ConversionCard from '@/components/ConversionCard'
+import FunnelBars from '@/components/FunnelBars'
+import SectionHeader from '@/components/SectionHeader'
+import PageHeader, { HeaderButton } from '@/components/PageHeader'
+import BrandFooter from '@/components/BrandFooter'
 import TimelineChart from '@/components/TimelineChart'
 import PagesBarChart from '@/components/PagesBarChart'
 import LancamentoFilter from '@/components/LancamentoFilter'
@@ -47,111 +52,139 @@ export default function FunilDashboard() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
+  const pctGrupos = kpis && kpis.total_leads > 0 ? (kpis.grupos / kpis.total_leads) * 100 : 0
+  const roi = kpis && kpis.total_gasto > 0
+    ? `${((kpis.total_receita / kpis.total_gasto) * 100).toFixed(0)}%`
+    : '—'
+
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-zinc-950/80 backdrop-blur border-b border-zinc-800/60 px-6 py-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-sm font-semibold text-white">Funil de conversão</h1>
-            <p className="text-xs text-zinc-500">Visão geral dos leads e conversões</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <LancamentoFilter options={lancamentos} value={lancamento} onChange={setLancamento} />
-            <button
-              onClick={fetchData}
-              className="p-2 rounded-lg bg-zinc-900 border border-zinc-700/60 hover:border-zinc-500 text-zinc-400 hover:text-zinc-200 transition-colors"
-            >
-              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            </button>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        title="Funil de"
+        accent="conversão"
+        contextLabel="Lançamento:"
+        contextValue={lancamento ?? 'Todos'}
+      >
+        <LancamentoFilter options={lancamentos} value={lancamento} onChange={setLancamento} />
+        <HeaderButton onClick={fetchData} title="Atualizar">
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+        </HeaderButton>
+      </PageHeader>
 
-      <div className="p-6 space-y-5">
-        {/* KPIs */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          <KPICard label="Valor Gasto" value={kpis ? formatBRL(kpis.total_gasto) : '—'} loading={loading} color="indigo" />
-          <KPICard label="CPL Investido" value={kpis ? formatBRL(kpis.cpl) : '—'} loading={loading} />
-          <KPICard label="Leads Orgânicos" value={kpis ? formatNum(kpis.leads_organico) : '—'} loading={loading} color="green" />
-          <KPICard label="Leads Captados" value={kpis ? formatNum(kpis.leads_trafego) : '—'} loading={loading} color="yellow" />
-          <KPICard label="Sem Rastreio" value={kpis ? formatNum(kpis.leads_sem_rastreio) : '—'} loading={loading} />
-          <KPICard label="Total de Leads" value={kpis ? formatNum(kpis.total_leads) : '—'} loading={loading} color="indigo" />
-        </div>
-
-        {/* Conversões */}
-        <div>
-          <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-3">Funil de conversão</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <ConversionCard
-              label="Página → Privado"
-              value={kpis?.conv_privado ?? 0}
-              from={`${kpis ? formatNum(kpis.total_leads) : '—'} leads`}
-              to={`${kpis ? formatNum(kpis.privado) : '—'} privado`}
-              loading={loading}
-            />
-            <ConversionCard
-              label="Privado → Grupo"
-              value={kpis?.conv_grupos ?? 0}
-              from={`${kpis ? formatNum(kpis.privado) : '—'} privado`}
-              to={`${kpis ? formatNum(kpis.grupos) : '—'} grupos`}
-              loading={loading}
-            />
-            <ConversionCard
-              label="Final do Fluxo"
-              value={kpis?.conv_compra ?? 0}
-              from={`${kpis ? formatNum(kpis.total_leads) : '—'} leads`}
-              to={`${kpis ? formatNum(kpis.compras) : '—'} compras`}
+      <div className="max-w-[1220px] mx-auto px-6 lg:px-10 pt-12 pb-16">
+        {/* Captação — cards de volume + pill de custo unitário (§3.3 / §3.4) */}
+        <section className="mb-12">
+          <SectionHeader badge="A" title="Captação" qualifier="Leads" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+            <KPICard label="Total de Leads" value={kpis ? formatNum(kpis.total_leads) : '—'} loading={loading} />
+            <KPICard label="Leads Captados" value={kpis ? formatNum(kpis.leads_trafego) : '—'} loading={loading} />
+            <KPICard label="Leads Orgânicos" value={kpis ? formatNum(kpis.leads_organico) : '—'} loading={loading} />
+            <KPICard label="Sem Rastreio" value={kpis ? formatNum(kpis.leads_sem_rastreio) : '—'} loading={loading} />
+            <KPICard
+              label="Valor Gasto"
+              value={kpis ? formatBRL(kpis.total_gasto) : '—'}
+              tone="spend"
+              highlight
               loading={loading}
             />
           </div>
-        </div>
-
-        {/* Funil visual */}
-        <div className="bg-zinc-900 border border-zinc-800/60 rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-zinc-200 mb-4">Visualização do funil</h3>
-          <div className="flex flex-col gap-2">
-            {[
-              { label: 'Total Leads', value: kpis?.total_leads ?? 0, color: 'bg-indigo-500', pct: 100 },
-              { label: 'Privado', value: kpis?.privado ?? 0, color: 'bg-violet-500', pct: kpis?.conv_privado ?? 0 },
-              { label: 'Grupos', value: kpis?.grupos ?? 0, color: 'bg-purple-500', pct: kpis ? (kpis.grupos / kpis.total_leads * 100) : 0 },
-              { label: 'Compras', value: kpis?.compras ?? 0, color: 'bg-fuchsia-500', pct: kpis?.conv_compra ?? 0 },
-            ].map((s, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <div
-                  className={`h-9 ${s.color} rounded-lg flex items-center justify-center transition-all duration-700 min-w-[60px]`}
-                  style={{ width: `${Math.max(s.pct, 4)}%` }}
-                >
-                  {!loading && (
-                    <span className="text-xs font-semibold text-white px-2 whitespace-nowrap">
-                      {formatNum(s.value)}
-                    </span>
-                  )}
-                </div>
-                <span className="text-xs text-zinc-500">{s.label}</span>
-              </div>
-            ))}
+          <div className="mt-3.5">
+            <PillRow>
+              <Pill label="CPL Investido" value={kpis ? formatBRL(kpis.cpl) : '—'} tone="cost" loading={loading} />
+            </PillRow>
           </div>
+        </section>
+
+        {/* Etapas do funil (§3.5) */}
+        <section className="mb-12">
+          <SectionHeader
+            badge="B"
+            title="Etapas do Funil"
+            group
+            sub="Panorama geral de cada estágio"
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <ConversionCard
+              label="Total de Leads"
+              value={kpis ? formatNum(kpis.total_leads) : '—'}
+              desc="Cadastros nas páginas de captação"
+              step={0}
+              loading={loading}
+            />
+            <ConversionCard
+              label="Privado"
+              value={kpis ? formatNum(kpis.privado) : '—'}
+              pct={kpis?.conv_privado}
+              desc={`Entraram no privado — de ${kpis ? formatNum(kpis.total_leads) : '—'} leads`}
+              step={1}
+              loading={loading}
+            />
+            <ConversionCard
+              label="Grupos"
+              value={kpis ? formatNum(kpis.grupos) : '—'}
+              pct={kpis?.conv_grupos}
+              desc={`Entraram nos grupos — de ${kpis ? formatNum(kpis.privado) : '—'} no privado`}
+              step={2}
+              loading={loading}
+            />
+            <ConversionCard
+              label="Compras"
+              value={kpis ? formatNum(kpis.compras) : '—'}
+              pct={kpis?.conv_compra}
+              desc={`Final do fluxo — de ${kpis ? formatNum(kpis.total_leads) : '—'} leads`}
+              step={3}
+              loading={loading}
+            />
+          </div>
+        </section>
+
+        {/* Funil visual (§3.6) */}
+        <div className="mb-12">
+          <FunnelBars
+            title="Funil de Conversão"
+            sub="Taxa de conversão entre etapas"
+            loading={loading}
+            steps={[
+              { label: 'Total Leads', value: formatNum(kpis?.total_leads ?? 0), width: 100 },
+              { label: 'Privado', value: formatNum(kpis?.privado ?? 0), width: kpis?.conv_privado ?? 0, pct: kpis?.conv_privado },
+              { label: 'Grupos', value: formatNum(kpis?.grupos ?? 0), width: pctGrupos, pct: kpis?.conv_grupos },
+              { label: 'Compras', value: formatNum(kpis?.compras ?? 0), width: kpis?.conv_compra ?? 0, pct: kpis?.conv_compra },
+            ]}
+          />
         </div>
 
-        {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Visualizações */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-12">
           <TimelineChart data={timeline} mode="leads" />
           <PagesBarChart data={pages} />
         </div>
 
-        {/* Receita */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <KPICard label="Receita Total" value={kpis ? formatBRL(kpis.total_receita) : '—'} color="green" loading={loading} />
-          <KPICard label="Compras" value={kpis ? formatNum(kpis.compras) : '—'} loading={loading} />
-          <KPICard label="Privado" value={kpis ? formatNum(kpis.privado) : '—'} loading={loading} />
-          <KPICard
-            label="ROI"
-            value={kpis && kpis.total_gasto > 0 ? `${((kpis.total_receita / kpis.total_gasto) * 100).toFixed(0)}%` : '—'}
-            color={kpis && kpis.total_receita >= kpis.total_gasto ? 'green' : 'red'}
-            loading={loading}
-          />
-        </div>
+        {/* Resultado */}
+        <section className="mb-12">
+          <SectionHeader badge="C" title="Resultado" qualifier="Receita" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+            <KPICard
+              label="Receita Total"
+              value={kpis ? formatBRL(kpis.total_receita) : '—'}
+              tone="good"
+              loading={loading}
+            />
+            <KPICard label="Compras" value={kpis ? formatNum(kpis.compras) : '—'} loading={loading} />
+            <KPICard label="Privado" value={kpis ? formatNum(kpis.privado) : '—'} loading={loading} />
+          </div>
+          <div className="mt-3.5">
+            <PillRow>
+              <Pill
+                label="ROI"
+                value={roi}
+                tone={kpis && kpis.total_receita >= kpis.total_gasto ? 'good' : 'bad'}
+                loading={loading}
+              />
+            </PillRow>
+          </div>
+        </section>
+
+        <BrandFooter />
       </div>
     </div>
   )

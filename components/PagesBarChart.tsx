@@ -1,21 +1,30 @@
 'use client'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts'
+import { PanelHeading } from './SectionHeader'
 
 interface PagesBarChartProps {
   data: Array<{ nome_pagina: string; total: number; trafego: number; organico: number }>
 }
 
-const COLORS = ['#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe', '#e0e7ff', '#f0f4ff', '#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe']
+// Sem cores inventadas (§5): escada de verdes decaindo por opacidade conforme o rank.
+const LADDER = ['#86e0a3', '#53a668', '#3ea98a', '#2f6f5c']
+const barColor = (i: number) => {
+  const base = LADDER[Math.min(i, LADDER.length - 1)]
+  const opacity = Math.max(1 - i * 0.07, 0.35)
+  return { fill: base, opacity }
+}
+
+const AXIS = 'rgba(245,255,248,0.4)'
 
 const Tip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null
   const d = payload[0].payload
   return (
-    <div className="bg-zinc-900 border border-zinc-700 rounded-lg p-3 text-xs shadow-xl">
-      <p className="text-white font-medium mb-1 max-w-[180px] truncate">{d.nome_pagina}</p>
-      <p className="text-zinc-400">Total: <span className="text-white">{d.total.toLocaleString('pt-BR')}</span></p>
-      <p className="text-zinc-400">Tráfego: <span className="text-yellow-400">{d.trafego.toLocaleString('pt-BR')}</span></p>
-      <p className="text-zinc-400">Orgânico: <span className="text-emerald-400">{d.organico.toLocaleString('pt-BR')}</span></p>
+    <div className="bg-surface border border-strong rounded-xl p-3 text-xs">
+      <p className="text-ink font-semibold mb-1 max-w-[180px] truncate">{d.nome_pagina}</p>
+      <p className="text-ink-45">Total: <span className="text-ink">{d.total.toLocaleString('pt-BR')}</span></p>
+      <p className="text-ink-45">Tráfego: <span className="text-accent-bright">{d.trafego.toLocaleString('pt-BR')}</span></p>
+      <p className="text-ink-45">Orgânico: <span className="text-teal-mid">{d.organico.toLocaleString('pt-BR')}</span></p>
     </div>
   )
 }
@@ -27,27 +36,31 @@ export default function PagesBarChart({ data }: PagesBarChartProps) {
   }))
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800/60 rounded-xl p-5">
-      <h3 className="text-sm font-semibold text-zinc-200 mb-4">Melhores páginas</h3>
-      <ResponsiveContainer width="100%" height={220}>
-        <BarChart data={formatted} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
-          <XAxis type="number" tick={{ fill: '#71717a', fontSize: 10 }} axisLine={false} tickLine={false} />
-          <YAxis
-            type="category"
-            dataKey="name"
-            tick={{ fill: '#a1a1aa', fontSize: 10 }}
-            axisLine={false}
-            tickLine={false}
-            width={130}
-          />
-          <Tooltip content={<Tip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-          <Bar dataKey="total" radius={[0, 4, 4, 0]}>
-            {formatted.map((_, i) => (
-              <Cell key={i} fill={COLORS[i % COLORS.length]} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
+    <section className="bg-surface border border-card rounded-[18px] p-[26px]">
+      <PanelHeading>Melhores páginas</PanelHeading>
+
+      <div className="mt-5">
+        <ResponsiveContainer width="100%" height={220}>
+          <BarChart data={formatted} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
+            <XAxis type="number" tick={{ fill: AXIS, fontSize: 10 }} axisLine={false} tickLine={false} />
+            <YAxis
+              type="category"
+              dataKey="name"
+              tick={{ fill: 'rgba(245,255,248,0.6)', fontSize: 10 }}
+              axisLine={false}
+              tickLine={false}
+              width={130}
+            />
+            <Tooltip content={<Tip />} cursor={{ fill: 'rgba(83,166,104,0.05)' }} />
+            <Bar dataKey="total" radius={[0, 8, 8, 0]}>
+              {formatted.map((_, i) => {
+                const c = barColor(i)
+                return <Cell key={i} fill={c.fill} fillOpacity={c.opacity} />
+              })}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </section>
   )
 }

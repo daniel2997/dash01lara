@@ -3,6 +3,11 @@ import { useEffect, useState, useCallback } from 'react'
 import { getSupabase } from '@/lib/supabase'
 import { formatBRL, formatNum } from '@/lib/utils'
 import KPICard from '@/components/KPICard'
+import Pill, { PillRow } from '@/components/Pill'
+import SectionHeader from '@/components/SectionHeader'
+import PageHeader, { HeaderButton } from '@/components/PageHeader'
+import BrandFooter from '@/components/BrandFooter'
+import Callout from '@/components/Callout'
 import TimelineChart from '@/components/TimelineChart'
 import MetricsTable, { Column } from '@/components/MetricsTable'
 import LancamentoFilter from '@/components/LancamentoFilter'
@@ -23,45 +28,46 @@ const brl = (v: number) => formatBRL(v)
 const num = (v: number) => formatNum(v)
 const pct = (v: number) => `${Number(v).toFixed(2)}%`
 
+// Cor por significado da coluna (§1.3): coral = dinheiro gasto, dourado = custo unitário.
 const campanhaCols: Column<CampRow>[] = [
-  { key: 'campanha', label: 'Campanha' },
-  { key: 'gasto', label: 'Investimento', format: brl, align: 'right' },
-  { key: 'leads', label: 'Leads', format: num, align: 'right' },
-  { key: 'cpl', label: 'CPL', format: brl, align: 'right' },
-  { key: 'cpm', label: 'CPM', format: brl, align: 'right' },
-  { key: 'cpc', label: 'CPC', format: brl, align: 'right' },
-  { key: 'ctr', label: 'CTR', format: pct, align: 'right' },
+  { key: 'campanha', label: 'Campanha', tone: 'strong', truncate: true },
+  { key: 'gasto', label: 'Investimento', format: brl, align: 'right', tone: 'spend' },
+  { key: 'leads', label: 'Leads', format: num, align: 'right', tone: 'good' },
+  { key: 'cpl', label: 'CPL', format: brl, align: 'right', tone: 'cost' },
+  { key: 'cpm', label: 'CPM', format: brl, align: 'right', tone: 'costAcc' },
+  { key: 'cpc', label: 'CPC', format: brl, align: 'right', tone: 'costAcc' },
+  { key: 'ctr', label: 'CTR', format: pct, align: 'right', tone: 'accent' },
   { key: 'impressoes', label: 'Impressões', format: num, align: 'right' },
 ]
 
 const conjCols: Column<ConjRow>[] = [
-  { key: 'conjunto', label: 'Conjunto' },
-  { key: 'gasto', label: 'Investimento', format: brl, align: 'right' },
-  { key: 'leads', label: 'Leads', format: num, align: 'right' },
-  { key: 'cpl', label: 'CPL', format: brl, align: 'right' },
-  { key: 'cpc', label: 'CPC', format: brl, align: 'right' },
-  { key: 'ctr', label: 'CTR', format: pct, align: 'right' },
+  { key: 'conjunto', label: 'Conjunto', tone: 'strong', truncate: true },
+  { key: 'gasto', label: 'Investimento', format: brl, align: 'right', tone: 'spend' },
+  { key: 'leads', label: 'Leads', format: num, align: 'right', tone: 'good' },
+  { key: 'cpl', label: 'CPL', format: brl, align: 'right', tone: 'cost' },
+  { key: 'cpc', label: 'CPC', format: brl, align: 'right', tone: 'costAcc' },
+  { key: 'ctr', label: 'CTR', format: pct, align: 'right', tone: 'accent' },
   { key: 'clicks', label: 'Clicks', format: num, align: 'right' },
 ]
 
 const adCols: Column<AdRow>[] = [
-  { key: 'anuncio', label: 'Anúncio' },
-  { key: 'gasto', label: 'Investimento', format: brl, align: 'right' },
-  { key: 'leads', label: 'Leads', format: num, align: 'right' },
-  { key: 'cpl', label: 'CPL', format: brl, align: 'right' },
-  { key: 'cpc', label: 'CPC', format: brl, align: 'right' },
-  { key: 'ctr', label: 'CTR', format: pct, align: 'right' },
+  { key: 'anuncio', label: 'Anúncio', tone: 'strong', truncate: true },
+  { key: 'gasto', label: 'Investimento', format: brl, align: 'right', tone: 'spend' },
+  { key: 'leads', label: 'Leads', format: num, align: 'right', tone: 'good' },
+  { key: 'cpl', label: 'CPL', format: brl, align: 'right', tone: 'cost' },
+  { key: 'cpc', label: 'CPC', format: brl, align: 'right', tone: 'costAcc' },
+  { key: 'ctr', label: 'CTR', format: pct, align: 'right', tone: 'accent' },
   { key: 'clicks', label: 'Clicks', format: num, align: 'right' },
 ]
 
 const dateCols: Column<DateRow>[] = [
-  { key: 'data', label: 'Data' },
-  { key: 'gasto', label: 'Investimento', format: brl, align: 'right' },
-  { key: 'leads', label: 'Leads', format: num, align: 'right' },
-  { key: 'cpl', label: 'CPL', format: brl, align: 'right' },
-  { key: 'cpm', label: 'CPM', format: brl, align: 'right' },
-  { key: 'cpc', label: 'CPC', format: brl, align: 'right' },
-  { key: 'ctr', label: 'CTR', format: pct, align: 'right' },
+  { key: 'data', label: 'Data', tone: 'strong' },
+  { key: 'gasto', label: 'Investimento', format: brl, align: 'right', tone: 'spend' },
+  { key: 'leads', label: 'Leads', format: num, align: 'right', tone: 'good' },
+  { key: 'cpl', label: 'CPL', format: brl, align: 'right', tone: 'cost' },
+  { key: 'cpm', label: 'CPM', format: brl, align: 'right', tone: 'costAcc' },
+  { key: 'cpc', label: 'CPC', format: brl, align: 'right', tone: 'costAcc' },
+  { key: 'ctr', label: 'CTR', format: pct, align: 'right', tone: 'accent' },
   { key: 'impressoes', label: 'Impressões', format: num, align: 'right' },
   { key: 'clicks', label: 'Clicks', format: num, align: 'right' },
 ]
@@ -103,50 +109,110 @@ export default function MidiaDashboard() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
+  // Linha de total da tabela por data — mesmos agregados já retornados por fn_campaigns_kpis.
+  const dateTotals = kpis ? {
+    label: 'Total',
+    values: {
+      gasto: formatBRL(kpis.total_gasto),
+      leads: formatNum(kpis.total_leads),
+      cpl: formatBRL(kpis.cpl),
+      cpm: formatBRL(kpis.cpm),
+      cpc: formatBRL(kpis.cpc),
+      ctr: `${kpis.ctr}%`,
+      impressoes: formatNum(kpis.total_impressoes),
+      clicks: formatNum(kpis.total_clicks),
+    },
+  } : undefined
+
+  const panelTotals = kpis ? [
+    { label: 'Total investido', value: formatBRL(kpis.total_gasto), tone: 'spend' as const },
+    { label: 'Total leads', value: formatNum(kpis.total_leads), tone: 'good' as const },
+  ] : undefined
+
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <div className="sticky top-0 z-10 bg-zinc-950/80 backdrop-blur border-b border-zinc-800/60 px-6 py-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-sm font-semibold text-white">Mídia Paga</h1>
-            <p className="text-xs text-zinc-500">Performance de campanhas do Facebook Ads</p>
+      <PageHeader
+        title="Mídia"
+        accent="Paga"
+        contextLabel="Lançamento:"
+        contextValue={lancamento ?? 'Todos'}
+      >
+        <LancamentoFilter options={lancamentos} value={lancamento} onChange={setLancamento} />
+        <HeaderButton onClick={fetchData} title="Atualizar">
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+        </HeaderButton>
+      </PageHeader>
+
+      <div className="max-w-[1220px] mx-auto px-6 lg:px-10 pt-12 pb-16">
+        {/* Tráfego — volumes em cards, taxas e custos em pills (§3.3 / §3.4) */}
+        <section className="mb-12">
+          <SectionHeader badge="A" title="Tráfego" qualifier="Facebook Ads" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+            <KPICard label="Impressões" value={kpis ? formatNum(kpis.total_impressoes) : '—'} loading={loading} />
+            <KPICard label="Clicks" value={kpis ? formatNum(kpis.total_clicks) : '—'} loading={loading} />
+            <KPICard label="Alcance" value={kpis ? formatNum(kpis.total_reach) : '—'} loading={loading} />
+            <KPICard label="Leads Tráfego" value={kpis ? formatNum(kpis.total_leads) : '—'} tone="good" loading={loading} />
+            <KPICard
+              label="Investimento"
+              value={kpis ? formatBRL(kpis.total_gasto) : '—'}
+              tone="spend"
+              highlight
+              loading={loading}
+            />
           </div>
-          <div className="flex items-center gap-2">
-            <LancamentoFilter options={lancamentos} value={lancamento} onChange={setLancamento} />
-            <button
-              onClick={fetchData}
-              className="p-2 rounded-lg bg-zinc-900 border border-zinc-700/60 hover:border-zinc-500 text-zinc-400 hover:text-zinc-200 transition-colors"
-            >
-              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            </button>
+          <div className="mt-3.5">
+            <PillRow>
+              <Pill label="CTR" value={kpis ? `${kpis.ctr}%` : '—'} tone={kpis && kpis.ctr >= 1 ? 'good' : 'bad'} loading={loading} />
+              <Pill label="CPC" value={kpis ? formatBRL(kpis.cpc) : '—'} tone="cost" loading={loading} />
+              <Pill label="CPM" value={kpis ? formatBRL(kpis.cpm) : '—'} tone="cost" loading={loading} />
+              <Pill label="CPL" value={kpis ? formatBRL(kpis.cpl) : '—'} tone="cost" loading={loading} />
+            </PillRow>
           </div>
-        </div>
-      </div>
+        </section>
 
-      <div className="p-6 space-y-5">
-        {/* KPIs */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3">
-          <KPICard label="Investimentos" value={kpis ? formatBRL(kpis.total_gasto) : '—'} loading={loading} color="indigo" />
-          <KPICard label="Leads Tráfego" value={kpis ? formatNum(kpis.total_leads) : '—'} loading={loading} color="yellow" />
-          <KPICard label="CPL" value={kpis ? formatBRL(kpis.cpl) : '—'} loading={loading} />
-          <KPICard label="CPM" value={kpis ? formatBRL(kpis.cpm) : '—'} loading={loading} />
-          <KPICard label="CTR" value={kpis ? `${kpis.ctr}%` : '—'} loading={loading} color={kpis && kpis.ctr >= 1 ? 'green' : 'red'} />
+        {/* Série temporal */}
+        <div className="mb-12">
+          <TimelineChart data={byDate} mode="campaigns" />
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <KPICard label="Impressões" value={kpis ? formatNum(kpis.total_impressoes) : '—'} loading={loading} />
-          <KPICard label="Clicks" value={kpis ? formatNum(kpis.total_clicks) : '—'} loading={loading} />
-          <KPICard label="CPC" value={kpis ? formatBRL(kpis.cpc) : '—'} loading={loading} />
-          <KPICard label="Alcance" value={kpis ? formatNum(kpis.total_reach) : '—'} loading={loading} />
+        {/* Detalhamento por dia (§3.7) */}
+        <div className="mb-12">
+          <MetricsTable
+            title="Por Data"
+            columns={dateCols}
+            data={byDate}
+            loading={loading}
+            maxRows={14}
+            totals={panelTotals}
+            totalRow={dateTotals}
+          />
         </div>
 
-        <TimelineChart data={byDate} mode="campaigns" />
+        {/* Rankings (§3.2 grupo + §3.7 + §3.8) */}
+        <section>
+          <SectionHeader
+            badge="#"
+            title="Rankings"
+            group
+            sub="Performance de campanhas, conjuntos e anúncios"
+          />
+          <div className="mb-5">
+            <Callout>
+              Ordenado pelos dados como vêm da fonte. Clique em qualquer coluna para reordenar — o
+              rank acompanha a ordem exibida.
+            </Callout>
+          </div>
 
-        <MetricsTable title="Por Data" columns={dateCols} data={byDate} loading={loading} maxRows={14} />
-        <MetricsTable title="Por Campanha" columns={campanhaCols} data={byCamp} loading={loading} />
-        <MetricsTable title="Por Conjunto" columns={conjCols} data={byConj} loading={loading} />
-        <MetricsTable title="Por Anúncio" columns={adCols} data={byAd} loading={loading} />
+          <div className="space-y-4">
+            <MetricsTable title="Por Campanha" columns={campanhaCols} data={byCamp} loading={loading} ranked />
+            <MetricsTable title="Por Conjunto" columns={conjCols} data={byConj} loading={loading} ranked />
+            <MetricsTable title="Por Anúncio" columns={adCols} data={byAd} loading={loading} ranked />
+          </div>
+        </section>
+
+        <div className="mt-12">
+          <BrandFooter />
+        </div>
       </div>
     </div>
   )

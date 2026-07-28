@@ -1,41 +1,64 @@
+// Card de etapa — §3.5 do guia.
+// Escada de verdes (§1.2): do mais escuro/frio ao mais claro conforme avança a etapa.
+export const STEP_COLORS = ['#2f6f5c', '#53a668', '#3ea98a', '#86e0a3']
+
 interface ConversionCardProps {
   label: string
-  value: number
-  from: string
-  to: string
+  /** Volume da etapa. */
+  value: string
+  /** Conversão vs. a etapa anterior. Omitido na primeira etapa. */
+  pct?: number
+  /** O que a etapa mede. */
+  desc: string
+  /** Posição na escada de verdes. */
+  step?: number
   loading?: boolean
 }
 
-function getColor(val: number) {
-  if (val >= 80) return { bar: 'bg-emerald-500', text: 'text-emerald-400' }
-  if (val >= 50) return { bar: 'bg-yellow-500', text: 'text-yellow-400' }
-  return { bar: 'bg-red-500', text: 'text-red-400' }
-}
+export default function ConversionCard({
+  label, value, pct, desc, step = 0, loading,
+}: ConversionCardProps) {
+  const dot = STEP_COLORS[step % STEP_COLORS.length]
+  // Verde = taxa boa, coral = taxa ruim (§1.3). Sem escala intermediária.
+  const good = (pct ?? 0) >= 50
 
-export default function ConversionCard({ label, value, from, to, loading }: ConversionCardProps) {
-  const c = getColor(value)
   return (
-    <div className="bg-zinc-900 border border-zinc-800/60 rounded-xl p-4">
-      <p className="text-xs text-zinc-500 font-medium uppercase tracking-wide mb-3">{label}</p>
-      {loading ? (
-        <div className="h-8 w-20 shimmer rounded mb-3" />
-      ) : (
-        <p className={`text-3xl font-bold mb-3 ${c.text}`}>{value.toFixed(1)}%</p>
-      )}
-      {/* Progress bar */}
-      <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden mb-3">
-        {!loading && (
-          <div
-            className={`h-full ${c.bar} rounded-full transition-all duration-700`}
-            style={{ width: `${Math.min(value, 100)}%` }}
+    <div className="bg-surface border border-card rounded-2xl p-[22px]">
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span
+            className="w-3 h-3 rounded-full flex-shrink-0"
+            style={{ background: dot, boxShadow: `0 0 10px ${dot}` }}
           />
+          <span className="text-xs font-bold uppercase tracking-[0.08em] text-ink-70 truncate">
+            {label}
+          </span>
+        </div>
+        {pct !== undefined && !loading && (
+          <span
+            className="flex-shrink-0 rounded-md px-2.5 py-[3px] text-xs font-bold"
+            style={
+              good
+                ? { color: '#86e0a3', background: 'rgba(83,166,104,0.14)' }
+                : { color: '#e79a86', background: 'rgba(231,154,134,0.12)' }
+            }
+          >
+            {pct.toFixed(1)}%
+          </span>
         )}
       </div>
-      <div className="flex justify-between text-[10px] text-zinc-500">
-        <span>{from}</span>
-        <span className="text-zinc-600">→</span>
-        <span>{to}</span>
-      </div>
+
+      {loading ? (
+        <div className="h-10 w-28 shimmer rounded" />
+      ) : (
+        <p className="text-[40px] leading-none font-extrabold tracking-[-0.02em] text-ink">
+          {value}
+        </p>
+      )}
+
+      <p className="mt-[14px] pt-[14px] border-t border-inner text-[13px] text-ink-45">
+        {desc}
+      </p>
     </div>
   )
 }

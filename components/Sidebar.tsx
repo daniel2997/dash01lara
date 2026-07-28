@@ -1,7 +1,8 @@
 'use client'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { TrendingUp, BarChart2, Users, ShoppingBag } from 'lucide-react'
+import { TrendingUp, BarChart2 } from 'lucide-react'
 
 const nav = [
   { href: '/funil', label: 'Funil', icon: TrendingUp },
@@ -12,50 +13,62 @@ export default function Sidebar() {
   const path = usePathname()
 
   return (
-    <aside className="w-52 flex-shrink-0 flex flex-col border-r border-zinc-800/60 bg-zinc-950">
-      {/* Logo */}
-      <div className="px-4 py-4 border-b border-zinc-800/60">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-            <BarChart2 size={13} className="text-white" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-white leading-none">Dashlara</p>
-            <p className="text-[10px] text-zinc-500 mt-0.5">eventolaracastilho</p>
+    <aside className="w-56 flex-shrink-0 flex flex-col border-r border-chrome bg-obsidian">
+      {/* Logo — centralizado verticalmente com o texto (§3.1) */}
+      <div className="px-4 py-5 border-b border-chrome">
+        <div className="flex items-center gap-3">
+          <Image
+            src="/logo-tile.png"
+            alt="Mete Marcha"
+            width={44}
+            height={44}
+            className="block rounded-[11px] flex-shrink-0"
+            style={{ boxShadow: '0 0 24px rgba(83,166,104,0.3)' }}
+            priority
+          />
+          <div className="min-w-0">
+            <p className="marker text-[13px] text-accent -rotate-2 leading-none mb-1.5">
+              mete marcha
+            </p>
+            <p className="text-sm font-bold uppercase tracking-tight text-ink leading-none">
+              Dash<span className="text-accent">lara</span>
+            </p>
           </div>
         </div>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 p-2 space-y-0.5">
+      <nav className="flex-1 p-2 space-y-1">
         {nav.map(({ href, label, icon: Icon }) => {
           const active = path === href || path.startsWith(href + '/')
           return (
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all ${
+              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors ${
                 active
-                  ? 'bg-indigo-500/15 text-indigo-400 font-medium'
-                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+                  ? 'bg-[rgba(83,166,104,0.15)] text-accent-bright font-semibold'
+                  : 'text-ink-60 hover:text-ink hover:bg-[rgba(83,166,104,0.07)]'
               }`}
             >
-              <Icon size={15} className={active ? 'text-indigo-400' : 'text-zinc-500'} />
+              <Icon size={15} className={active ? 'text-accent-bright' : 'text-ink-40'} />
               {label}
             </Link>
           )
         })}
       </nav>
 
-      {/* Footer */}
-      <div className="p-3 border-t border-zinc-800/60">
+      {/* Rodapé */}
+      <div className="p-3 border-t border-chrome">
         <div className="flex items-center gap-2.5 px-2 py-1.5">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xs font-semibold text-white shadow">
+          <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-extrabold text-[#041008] flex-shrink-0"
+            style={{ background: 'linear-gradient(135deg, #53a668, #86e0a3)' }}
+          >
             AL
           </div>
-          <div>
-            <p className="text-xs font-medium text-zinc-300 leading-none">Ana Lisboa</p>
-            <p className="text-[10px] text-zinc-500 mt-0.5">Admin</p>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-ink-70 leading-none truncate">Ana Lisboa</p>
+            <p className="text-[10px] text-ink-40 mt-1">eventolaracastilho</p>
           </div>
         </div>
       </div>
