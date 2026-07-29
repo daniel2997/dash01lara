@@ -111,17 +111,22 @@ COMMENT ON FUNCTION public.fn_parse_valor(text) IS
 --    e com o valor convertido. Serve as duas funcoes abaixo.
 -- ────────────────────────────────────────────────────────────────────────────
 CREATE OR REPLACE VIEW public.vw_vendas AS
-  SELECT 'entrada'::text AS produto, w.email, w.telefone,
-         public.fn_parse_valor(w.valor) AS valor
-  FROM public.workcompra w
-  WHERE BTRIM(LOWER(COALESCE(w.email, ''))) NOT LIKE '%example.com'
-    AND BTRIM(LOWER(COALESCE(w.email, ''))) NOT LIKE 'teste@%'
-  UNION ALL
-  SELECT 'high'::text, m.email, m.telefone,
-         public.fn_parse_valor(m.valor)
-  FROM public.mlcaprovado m
-  WHERE BTRIM(LOWER(COALESCE(m.email, ''))) NOT LIKE '%example.com'
-    AND BTRIM(LOWER(COALESCE(m.email, ''))) NOT LIKE 'teste@%';
+  SELECT
+    row_number() OVER (ORDER BY t.produto, t.created_at, t.email) AS venda_id,
+    t.produto, t.email, t.telefone, t.created_at AS data_compra, t.valor
+  FROM (
+    SELECT 'entrada'::text AS produto, w.email, w.telefone, w.created_at,
+           public.fn_parse_valor(w.valor) AS valor
+    FROM public.workcompra w
+    WHERE BTRIM(LOWER(COALESCE(w.email, ''))) NOT LIKE '%example.com'
+      AND BTRIM(LOWER(COALESCE(w.email, ''))) NOT LIKE 'teste@%'
+    UNION ALL
+    SELECT 'high'::text, m.email, m.telefone, m.created_at,
+           public.fn_parse_valor(m.valor)
+    FROM public.mlcaprovado m
+    WHERE BTRIM(LOWER(COALESCE(m.email, ''))) NOT LIKE '%example.com'
+      AND BTRIM(LOWER(COALESCE(m.email, ''))) NOT LIKE 'teste@%'
+  ) t;
 
 COMMENT ON VIEW public.vw_vendas IS
   'Vendas dos dois produtos (entrada=workcompra, high=mlcaprovado), sem linhas de teste e com valor ja numerico.';
@@ -131,42 +136,57 @@ COMMENT ON VIEW public.vw_vendas IS
 -- 2b) Cada venda com o seu lancamento resolvido — a peca central.
 --
 -- A compra nao guarda lancamento; ela e ligada casando email OU telefone com
--- cadastroClientes. Em vez de perguntar isso venda a venda, monta-se o mapa
--- chave -> lancamento uma vez so e casa-se por hash join.
+-- cadastroClientes.
 --
--- MIN(lancamento) resolve o comprador que aparece em mais de um lancamento:
--- escolhe sempre o mesmo, entao a venda conta UMA vez e a soma por tag fecha
--- com o total geral. Email tem prioridade sobre telefone por ser a chave mais
--- confiavel. lancamento NULL = venda sem tag.
+-- REGRA: vale so o cadastro ANTERIOR a compra, e entre esses o MAIS RECENTE.
+-- Casar so por identidade, ignorando data, credita a venda a qualquer
+-- lancamento em que a pessoa um dia se cadastrou — inclusive um que ainda nem
+-- existia quando ela comprou. Media na base de 2026-07-29: isso inflava 21%
+-- da receita atribuida (R$ 125.529), e era o unico motivo de o LA16MAR26
+-- aparecer com R$ 27 sem ter tido venda nenhuma (compra em 2025-12-03,
+-- cadastro em 2026-03-09).
+--
+-- "Mais recente antes da compra" e o lancamento que plausivelmente levou a
+-- pessoa a comprar. Email tem prioridade sobre telefone por ser mais confiavel.
+-- lancamento NULL = venda sem tag.
+--
+-- DISTINCT ON escolhe um unico cadastro por venda, entao cada venda conta uma
+-- vez e a soma por tag fecha com o total geral.
 -- ────────────────────────────────────────────────────────────────────────────
 CREATE OR REPLACE VIEW public.vw_vendas_tag AS
-  WITH tag_por_email AS (
-    SELECT BTRIM(LOWER(email)) AS chave, MIN(lancamento) AS lancamento
+  WITH cad AS (
+    SELECT
+      lancamento,
+      data_criacao,
+      NULLIF(BTRIM(LOWER(email)), '')                                   AS chave_email,
+      NULLIF(regexp_replace(COALESCE(telefone, ''), '\D', '', 'g'), '') AS chave_fone
     FROM public."cadastroClientes"
     WHERE lancamento IS NOT NULL
-      AND NULLIF(BTRIM(LOWER(email)), '') IS NOT NULL
-    GROUP BY 1
   ),
-  tag_por_fone AS (
-    SELECT regexp_replace(COALESCE(telefone, ''), '\D', '', 'g') AS chave,
-           MIN(lancamento) AS lancamento
-    FROM public."cadastroClientes"
-    WHERE lancamento IS NOT NULL
-      AND NULLIF(regexp_replace(COALESCE(telefone, ''), '\D', '', 'g'), '') IS NOT NULL
-    GROUP BY 1
+  por_email AS (
+    SELECT DISTINCT ON (s.venda_id) s.venda_id, c.lancamento
+    FROM public.vw_vendas s
+    JOIN cad c ON c.chave_email = NULLIF(BTRIM(LOWER(s.email)), '')
+    WHERE c.data_criacao <= s.data_compra
+    ORDER BY s.venda_id, c.data_criacao DESC
+  ),
+  por_fone AS (
+    SELECT DISTINCT ON (s.venda_id) s.venda_id, c.lancamento
+    FROM public.vw_vendas s
+    JOIN cad c ON c.chave_fone = NULLIF(regexp_replace(COALESCE(s.telefone, ''), '\D', '', 'g'), '')
+    WHERE c.data_criacao <= s.data_compra
+    ORDER BY s.venda_id, c.data_criacao DESC
   )
   SELECT
     s.produto,
     s.valor,
     COALESCE(e.lancamento, f.lancamento) AS lancamento
   FROM public.vw_vendas s
-  LEFT JOIN tag_por_email e
-         ON e.chave = NULLIF(BTRIM(LOWER(s.email)), '')
-  LEFT JOIN tag_por_fone f
-         ON f.chave = NULLIF(regexp_replace(COALESCE(s.telefone, ''), '\D', '', 'g'), '');
+  LEFT JOIN por_email e ON e.venda_id = s.venda_id
+  LEFT JOIN por_fone  f ON f.venda_id = s.venda_id;
 
 COMMENT ON VIEW public.vw_vendas_tag IS
-  'Cada venda com o lancamento resolvido por email (prioridade) ou telefone. lancamento NULL = sem tag. Cada venda aparece uma unica vez.';
+  'Cada venda com o lancamento resolvido: cadastro mais recente ANTERIOR a compra, por email (prioridade) ou telefone. lancamento NULL = sem tag. Cada venda aparece uma unica vez.';
 
 
 -- ────────────────────────────────────────────────────────────────────────────
