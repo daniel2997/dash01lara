@@ -9,8 +9,9 @@
 --     de normalizar. Privado.telefone e grupos.phone idem.
 --   - cadastroClientes.data_criacao e TIMESTAMPTZ (era timestamp).
 --   - grupos.phone tem lixo (valor 0) -> fn_norm_fone descarta.
---   - campaigns_bms.launch_tag esta 100% NULL hoje: filtrar Midia Paga por
---     lancamento devolve zero. Ver nota no bloco 6.
+--   - campaigns_bms.launch_tag chega 100% NULL, e a tag no nome da campanha
+--     esta errada ([LA29JUL26] e [LA30JUL26] quando o certo e LA03AGOSTO26).
+--     Resolvido no bloco 2b com a tabela lancamento_alias.
 --
 -- workcompra e mlcaprovado sao criadas VAZIAS, com a estrutura certa. O
 -- faturamento aparece como R$ 0,00 ate voce carregar os dados; quando carregar,
@@ -91,6 +92,52 @@ LANGUAGE sql IMMUTABLE
 AS $function$
   SELECT COALESCE(NULLIF(regexp_replace(COALESCE(p_v, ''), '\D', '', 'g'), '')::bigint, 0);
 $function$;
+
+
+-- ────────────────────────────────────────────────────────────────────────────
+-- 2b) Lancamento das campanhas
+--
+-- campaigns_bms.launch_tag chega NULL do processo de ingestao. A tag existe no
+-- NOME da campanha, no formato "[LA29JUL26]_[CADASTRO]_...", mas o gestor
+-- digita errado: hoje ha [LA29JUL26] (58 linhas) e [LA30JUL26] (6 linhas), e
+-- as duas sao na verdade LA03AGOSTO26.
+--
+-- Por isso nao da para so extrair a tag do nome. A tabela de alias abaixo
+-- traduz o que foi digitado para o lancamento de verdade. Quando o gestor
+-- errar de novo, e uma linha aqui — nao mexe em funcao nenhuma.
+-- ────────────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.lancamento_alias (
+  alias      text PRIMARY KEY,   -- o que aparece entre colchetes no nome
+  lancamento text NOT NULL       -- o lancamento de verdade
+);
+
+INSERT INTO public.lancamento_alias(alias, lancamento) VALUES
+  ('LA29JUL26', 'LA03AGOSTO26'),
+  ('LA30JUL26', 'LA03AGOSTO26')
+ON CONFLICT (alias) DO UPDATE SET lancamento = EXCLUDED.lancamento;
+
+ALTER TABLE public.lancamento_alias ENABLE ROW LEVEL SECURITY;
+
+-- Campanha com o lancamento resolvido. Ordem de precedencia:
+--   1. launch_tag, se um dia a ingestao passar a preencher
+--   2. o alias traduzido
+--   3. a tag crua do nome, quando nao houver alias cadastrado
+CREATE OR REPLACE VIEW public.vw_campanhas AS
+  SELECT
+    b.*,
+    COALESCE(
+      NULLIF(BTRIM(b.launch_tag), ''),
+      a.lancamento,
+      t.tag_bruta
+    ) AS lancamento
+  FROM public.campaigns_bms b
+  LEFT JOIN LATERAL (
+    SELECT substring(b."Campanha" FROM '^\s*\[\s*([A-Za-z0-9]+)\s*\]') AS tag_bruta
+  ) t ON TRUE
+  LEFT JOIN public.lancamento_alias a ON a.alias = t.tag_bruta;
+
+COMMENT ON VIEW public.vw_campanhas IS
+  'campaigns_bms com o lancamento resolvido: launch_tag, senao alias traduzido, senao a tag crua do nome da campanha.';
 
 
 -- ────────────────────────────────────────────────────────────────────────────
@@ -199,8 +246,8 @@ BEGIN
   FROM vw_vendas_tag s
   WHERE p_lancamento IS NULL OR s.lancamento = p_lancamento;
 
-  SELECT COALESCE(SUM(gasto::numeric), 0) INTO v_gasto FROM campaigns_bms
-    WHERE p_lancamento IS NULL OR launch_tag = p_lancamento;
+  SELECT COALESCE(SUM(gasto::numeric), 0) INTO v_gasto FROM vw_campanhas
+    WHERE p_lancamento IS NULL OR lancamento = p_lancamento;
 
   RETURN json_build_object(
     'total_leads',       v_total,
@@ -296,8 +343,8 @@ AS $function$
            COALESCE(SUM(impressoes), 0)                  AS impressoes,
            COALESCE(SUM(clicks), 0)                      AS clicks,
            COALESCE(SUM(reach), 0)                       AS reach
-    FROM campaigns_bms
-    WHERE p_lancamento IS NULL OR launch_tag = p_lancamento
+    FROM vw_campanhas
+    WHERE p_lancamento IS NULL OR lancamento = p_lancamento
   )
   SELECT json_build_object(
     'total_gasto',      ROUND(gasto, 2),
@@ -324,9 +371,9 @@ AS $function$
            SUM(public.fn_parse_int(b.leads)) AS l,
            SUM(b.impressoes)                 AS i,
            SUM(b.clicks)                     AS c
-    FROM campaigns_bms b
+    FROM vw_campanhas b
     WHERE b.data ~ '^\d{4}-\d{2}-\d{2}'      -- ignora data em formato inesperado
-      AND (p_lancamento IS NULL OR b.launch_tag = p_lancamento)
+      AND (p_lancamento IS NULL OR b.lancamento = p_lancamento)
     GROUP BY 1
   )
   SELECT d, ROUND(g, 2), l, i, c,
@@ -349,8 +396,8 @@ AS $function$
            SUM(public.fn_parse_int(b.leads)) AS l,
            SUM(b.impressoes)                 AS i,
            SUM(b.clicks)                     AS c
-    FROM campaigns_bms b
-    WHERE p_lancamento IS NULL OR b.launch_tag = p_lancamento
+    FROM vw_campanhas b
+    WHERE p_lancamento IS NULL OR b.lancamento = p_lancamento
     GROUP BY 1
   )
   SELECT k, ROUND(g, 2), l, i, c,
@@ -373,8 +420,8 @@ AS $function$
            SUM(public.fn_parse_int(b.leads)) AS l,
            SUM(b.impressoes)                 AS i,
            SUM(b.clicks)                     AS c
-    FROM campaigns_bms b
-    WHERE p_lancamento IS NULL OR b.launch_tag = p_lancamento
+    FROM vw_campanhas b
+    WHERE p_lancamento IS NULL OR b.lancamento = p_lancamento
     GROUP BY 1
   )
   SELECT k, ROUND(g, 2), l, c,
@@ -396,8 +443,8 @@ AS $function$
            SUM(public.fn_parse_int(b.leads)) AS l,
            SUM(b.impressoes)                 AS i,
            SUM(b.clicks)                     AS c
-    FROM campaigns_bms b
-    WHERE p_lancamento IS NULL OR b.launch_tag = p_lancamento
+    FROM vw_campanhas b
+    WHERE p_lancamento IS NULL OR b.lancamento = p_lancamento
     GROUP BY 1
   )
   SELECT k, ROUND(g, 2), l, c,
