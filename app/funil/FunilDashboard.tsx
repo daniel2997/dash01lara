@@ -1,8 +1,9 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { getSupabase } from '@/lib/supabase'
-import { formatBRL, formatNum, formatPercent } from '@/lib/utils'
+import { formatBRL, formatNum } from '@/lib/utils'
 import Callout from '@/components/Callout'
+import MetricsTable from '@/components/MetricsTable'
 import KPICard from '@/components/KPICard'
 import Pill, { PillRow } from '@/components/Pill'
 import ConversionCard from '@/components/ConversionCard'
@@ -25,20 +26,24 @@ interface FunilKPIs {
   // corrigida (sql/fix_fn_funil_kpis.sql) não for aplicada no Supabase.
   receita_entrada?: number; receita_high_ticket?: number;
   compras_entrada?: number; compras_high_ticket?: number;
-  // Receita que não casa com lançamento nenhum. Valor GLOBAL — não muda com o
-  // filtro, porque é o balde órfão do banco inteiro.
-  receita_sem_tag?: number; compras_sem_tag?: number;
-  // Faturamento sem filtro; denominador de receita_sem_tag e cobertura_receita.
-  receita_total_geral?: number;
-  // % da receita geral que este lançamento conseguiu atribuir; null na visão geral.
-  cobertura_receita?: number | null;
   // null quando a RPC não consegue calcular (denominador zero) — exibido como "—"
   cpl: number | null;
   conv_privado: number | null; conv_grupos: number | null; conv_compra: number | null;
 }
 
+/** Uma linha por lançamento, mais a linha "Sem tag" com as compras que não
+ *  casam com nenhum cadastro etiquetado. A soma fecha com o total geral. */
+interface ReceitaPorTag {
+  tag: string
+  receita_entrada: number
+  receita_high_ticket: number
+  receita_total: number
+  compras: number
+}
+
 export default function FunilDashboard() {
   const [kpis, setKpis] = useState<FunilKPIs | null>(null)
+  const [porTag, setPorTag] = useState<ReceitaPorTag[]>([])
   const [pages, setPages] = useState<any[]>([])
   const [timeline, setTimeline] = useState<any[]>([])
   const [lancamentos, setLancamentos] = useState<any[]>([])
@@ -49,16 +54,20 @@ export default function FunilDashboard() {
     setLoading(true)
     try {
       const sb = getSupabase()
-      const [kpisRes, pagesRes, timelineRes, lancRes] = await Promise.all([
+      const [kpisRes, pagesRes, timelineRes, lancRes, porTagRes] = await Promise.all([
         sb.rpc('fn_funil_kpis', { p_lancamento: lancamento }),
         sb.rpc('fn_leads_by_pagina', { p_lancamento: lancamento, p_limit: 8 }),
         sb.rpc('fn_leads_over_time', { p_lancamento: lancamento, p_days: 60 }),
         sb.rpc('fn_lancamentos'),
+        // Sem parâmetro: a tabela por tag é sempre a visão completa, para dar
+        // o contexto de quanto o lançamento filtrado representa do todo.
+        sb.rpc('fn_receita_por_tag'),
       ])
       if (kpisRes.data) setKpis(kpisRes.data as FunilKPIs)
       if (pagesRes.data) setPages(pagesRes.data)
       if (timelineRes.data) setTimeline(timelineRes.data)
       if (lancRes.data) setLancamentos(lancRes.data)
+      if (porTagRes.data) setPorTag(porTagRes.data as ReceitaPorTag[])
     } catch (err) {
       console.error('Erro ao carregar dados:', err)
     } finally {
@@ -84,12 +93,15 @@ export default function FunilDashboard() {
   const ticket = (receita?: number, qtd?: number) =>
     receita != null && qtd != null && qtd > 0 ? formatBRL(receita / qtd) : '—'
 
-  /** Fatia do faturamento que não casa com nenhum lançamento. Sempre sobre o
-   *  total geral, nunca sobre o filtrado — senão passaria de 100% ao filtrar. */
-  const pctSemTag =
-    kpis?.receita_sem_tag != null && kpis.receita_total_geral
-      ? (kpis.receita_sem_tag / kpis.receita_total_geral) * 100
-      : null
+  const somaTags = porTag.reduce(
+    (a, r) => ({
+      entrada: a.entrada + (r.receita_entrada ?? 0),
+      high: a.high + (r.receita_high_ticket ?? 0),
+      total: a.total + (r.receita_total ?? 0),
+      compras: a.compras + (r.compras ?? 0),
+    }),
+    { entrada: 0, high: 0, total: 0, compras: 0 },
+  )
 
   return (
     <div className="min-h-screen">
@@ -196,9 +208,9 @@ export default function FunilDashboard() {
         {/* Resultado */}
         <section className="mb-12">
           <SectionHeader badge="C" title="Resultado" qualifier="Receita" />
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
             <KPICard
-              label={lancamento ? 'Receita do Lançamento' : 'Receita Total'}
+              label={lancamento ? 'Faturamento do Lançamento' : 'Faturamento Total'}
               value={kpis ? formatBRL(kpis.total_receita) : '—'}
               sub="Entrada + high ticket"
               tone="good"
@@ -215,15 +227,6 @@ export default function FunilDashboard() {
               label="High Ticket"
               value={kpis ? formatBRL(kpis.receita_high_ticket) : '—'}
               sub={`${kpis ? formatNum(kpis.compras_high_ticket) : '—'} vendas · ticket ${ticket(kpis?.receita_high_ticket, kpis?.compras_high_ticket)}`}
-              loading={loading}
-            />
-            {/* Sempre o número global — por isso o rótulo diz "geral", para não
-                ser lido como parte do lançamento filtrado ao lado. */}
-            <KPICard
-              label="Sem Tag (geral)"
-              value={kpis ? formatBRL(kpis.receita_sem_tag) : '—'}
-              sub={`${kpis ? formatNum(kpis.compras_sem_tag) : '—'} compras · ${formatPercent(pctSemTag)} do faturamento`}
-              tone="cost"
               loading={loading}
             />
           </div>
@@ -253,33 +256,39 @@ export default function FunilDashboard() {
               </Callout>
             </div>
           )}
-
-          {/* A compra não guarda lançamento — ela é atribuída casando e-mail/telefone
-              com cadastroClientes, e só ~43% casam. Sem esta nota, o valor filtrado
-              parece "o lançamento vendeu pouco" em vez de "não deu para atribuir". */}
-          {!rpcDesatualizada && pctSemTag != null && (
-            <div className="mt-3.5">
-              <Callout>
-                {lancamento ? (
-                  <>
-                    <strong>{lancamento}</strong> responde por{' '}
-                    {formatPercent(kpis?.cobertura_receita)} do faturamento. A compra não guarda
-                    lançamento — é atribuída casando e-mail/telefone com o cadastro, e{' '}
-                    {formatPercent(pctSemTag)} da receita não casa com nenhum. Trate o valor do
-                    lançamento como piso, não como total.
-                  </>
-                ) : (
-                  <>
-                    {formatPercent(pctSemTag)} do faturamento ({formatBRL(kpis?.receita_sem_tag)})
-                    não casa com lançamento nenhum — a compra não guarda a tag e o cadastro
-                    correspondente está sem <code>lancamento</code> preenchido. É por isso que a
-                    soma dos lançamentos fica bem abaixo deste total.
-                  </>
-                )}
-              </Callout>
-            </div>
-          )}
         </section>
+
+        {/* Faturamento por tag — sempre a visão completa, independente do filtro.
+            A linha "Sem tag" é a compra que não casa com nenhum cadastro
+            etiquetado; sem ela a tabela não fecharia com o total geral. */}
+        <div className="mb-12">
+          <MetricsTable<ReceitaPorTag>
+            title="Faturamento por tag"
+            data={porTag}
+            loading={loading}
+            maxRows={12}
+            totals={[
+              { label: 'Total', value: formatBRL(somaTags.total), tone: 'good' },
+              { label: 'Vendas', value: formatNum(somaTags.compras) },
+            ]}
+            columns={[
+              { key: 'tag', label: 'Lançamento', tone: 'strong' },
+              { key: 'compras', label: 'Vendas', align: 'right', format: v => formatNum(v) },
+              { key: 'receita_entrada', label: 'Entrada', align: 'right', format: v => formatBRL(v) },
+              { key: 'receita_high_ticket', label: 'High Ticket', align: 'right', format: v => formatBRL(v) },
+              { key: 'receita_total', label: 'Total', align: 'right', tone: 'good', format: v => formatBRL(v) },
+            ]}
+            totalRow={{
+              label: 'Total',
+              values: {
+                compras: formatNum(somaTags.compras),
+                receita_entrada: formatBRL(somaTags.entrada),
+                receita_high_ticket: formatBRL(somaTags.high),
+                receita_total: formatBRL(somaTags.total),
+              },
+            }}
+          />
+        </div>
 
         <BrandFooter />
       </div>
