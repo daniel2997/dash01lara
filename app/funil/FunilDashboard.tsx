@@ -12,7 +12,6 @@ import SectionHeader from '@/components/SectionHeader'
 import PageHeader, { HeaderButton } from '@/components/PageHeader'
 import BrandFooter from '@/components/BrandFooter'
 import TimelineChart from '@/components/TimelineChart'
-import PagesBarChart from '@/components/PagesBarChart'
 import LancamentoFilter from '@/components/LancamentoFilter'
 import { RefreshCw } from 'lucide-react'
 
@@ -44,7 +43,6 @@ interface ReceitaPorTag {
 export default function FunilDashboard() {
   const [kpis, setKpis] = useState<FunilKPIs | null>(null)
   const [porTag, setPorTag] = useState<ReceitaPorTag[]>([])
-  const [pages, setPages] = useState<any[]>([])
   const [timeline, setTimeline] = useState<any[]>([])
   const [lancamentos, setLancamentos] = useState<any[]>([])
   const [lancamento, setLancamento] = useState<string | null>(null)
@@ -54,9 +52,8 @@ export default function FunilDashboard() {
     setLoading(true)
     try {
       const sb = getSupabase()
-      const [kpisRes, pagesRes, timelineRes, lancRes, porTagRes] = await Promise.all([
+      const [kpisRes, timelineRes, lancRes, porTagRes] = await Promise.all([
         sb.rpc('fn_funil_kpis', { p_lancamento: lancamento }),
-        sb.rpc('fn_leads_by_pagina', { p_lancamento: lancamento, p_limit: 8 }),
         sb.rpc('fn_leads_over_time', { p_lancamento: lancamento, p_days: 60 }),
         sb.rpc('fn_lancamentos'),
         // Sem parâmetro: a tabela por tag é sempre a visão completa, para dar
@@ -64,7 +61,6 @@ export default function FunilDashboard() {
         sb.rpc('fn_receita_por_tag'),
       ])
       if (kpisRes.data) setKpis(kpisRes.data as FunilKPIs)
-      if (pagesRes.data) setPages(pagesRes.data)
       if (timelineRes.data) setTimeline(timelineRes.data)
       if (lancRes.data) setLancamentos(lancRes.data)
       if (porTagRes.data) setPorTag(porTagRes.data as ReceitaPorTag[])
@@ -199,10 +195,10 @@ export default function FunilDashboard() {
           />
         </div>
 
-        {/* Visualizações */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-12">
+        {/* Visualizações — timeline ocupa a largura toda desde que o gráfico
+            de páginas saiu do escopo deste dash. */}
+        <div className="mb-12">
           <TimelineChart data={timeline} mode="leads" />
-          <PagesBarChart data={pages} />
         </div>
 
         {/* Resultado */}
