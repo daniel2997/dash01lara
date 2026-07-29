@@ -31,6 +31,11 @@ yarn-error.log*
 # vercel
 .vercel
 
+# dumps do Supabase — NAO commitar: export_all.js carrega a service_role key
+# hardcoded e os CSVs tem nome/email/telefone/IP de ~178 mil leads.
+/export_supabase
+/export_supabase_lara_castilho
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

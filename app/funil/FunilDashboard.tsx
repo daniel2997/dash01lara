@@ -1,7 +1,8 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { getSupabase } from '@/lib/supabase'
-import { formatBRL, formatNum } from '@/lib/utils'
+import { formatBRL, formatNum, formatPercent } from '@/lib/utils'
+import Callout from '@/components/Callout'
 import KPICard from '@/components/KPICard'
 import Pill, { PillRow } from '@/components/Pill'
 import ConversionCard from '@/components/ConversionCard'
@@ -17,8 +18,23 @@ import { RefreshCw } from 'lucide-react'
 interface FunilKPIs {
   total_leads: number; leads_trafego: number; leads_organico: number;
   leads_sem_rastreio: number; privado: number; grupos: number; compras: number;
-  total_gasto: number; total_receita: number; cpl: number;
-  conv_privado: number; conv_grupos: number; conv_compra: number;
+  total_gasto: number; total_receita: number;
+  // Receita vem quebrada em dois produtos com ticket ~25x diferente: workcompra
+  // (entrada, ~R$ 28) e mlcaprovado (high ticket, ~R$ 682). Um total único
+  // esconde essa composição. Opcionais: ficam undefined enquanto a fn_funil_kpis
+  // corrigida (sql/fix_fn_funil_kpis.sql) não for aplicada no Supabase.
+  receita_entrada?: number; receita_high_ticket?: number;
+  compras_entrada?: number; compras_high_ticket?: number;
+  // Receita que não casa com lançamento nenhum. Valor GLOBAL — não muda com o
+  // filtro, porque é o balde órfão do banco inteiro.
+  receita_sem_tag?: number; compras_sem_tag?: number;
+  // Faturamento sem filtro; denominador de receita_sem_tag e cobertura_receita.
+  receita_total_geral?: number;
+  // % da receita geral que este lançamento conseguiu atribuir; null na visão geral.
+  cobertura_receita?: number | null;
+  // null quando a RPC não consegue calcular (denominador zero) — exibido como "—"
+  cpl: number | null;
+  conv_privado: number | null; conv_grupos: number | null; conv_compra: number | null;
 }
 
 export default function FunilDashboard() {
@@ -53,9 +69,27 @@ export default function FunilDashboard() {
   useEffect(() => { fetchData() }, [fetchData])
 
   const pctGrupos = kpis && kpis.total_leads > 0 ? (kpis.grupos / kpis.total_leads) * 100 : 0
-  const roi = kpis && kpis.total_gasto > 0
-    ? `${((kpis.total_receita / kpis.total_gasto) * 100).toFixed(0)}%`
+
+  // receita/gasto é ROAS, não ROI (ROI seria (receita - gasto)/gasto). Rotular
+  // 345% como "ROI" superestima o retorno em 100 p.p. — o lucro vai no pill ao lado.
+  const roas = kpis && kpis.total_gasto > 0
+    ? `${(kpis.total_receita / kpis.total_gasto).toFixed(2)}x`
     : '—'
+  const lucro = kpis ? kpis.total_receita - kpis.total_gasto : null
+
+  /** A RPC antiga não devolve a quebra por produto — sinal de que o SQL de
+   *  correção ainda não rodou e o total exibido está 100x inflado e sem o high ticket. */
+  const rpcDesatualizada = kpis != null && kpis.receita_entrada === undefined
+
+  const ticket = (receita?: number, qtd?: number) =>
+    receita != null && qtd != null && qtd > 0 ? formatBRL(receita / qtd) : '—'
+
+  /** Fatia do faturamento que não casa com nenhum lançamento. Sempre sobre o
+   *  total geral, nunca sobre o filtrado — senão passaria de 100% ao filtrar. */
+  const pctSemTag =
+    kpis?.receita_sem_tag != null && kpis.receita_total_geral
+      ? (kpis.receita_sem_tag / kpis.receita_total_geral) * 100
+      : null
 
   return (
     <div className="min-h-screen">
@@ -162,26 +196,89 @@ export default function FunilDashboard() {
         {/* Resultado */}
         <section className="mb-12">
           <SectionHeader badge="C" title="Resultado" qualifier="Receita" />
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
             <KPICard
-              label="Receita Total"
+              label={lancamento ? 'Receita do Lançamento' : 'Receita Total'}
               value={kpis ? formatBRL(kpis.total_receita) : '—'}
+              sub="Entrada + high ticket"
               tone="good"
+              highlight
               loading={loading}
             />
-            <KPICard label="Compras" value={kpis ? formatNum(kpis.compras) : '—'} loading={loading} />
-            <KPICard label="Privado" value={kpis ? formatNum(kpis.privado) : '—'} loading={loading} />
+            <KPICard
+              label="Entrada"
+              value={kpis ? formatBRL(kpis.receita_entrada) : '—'}
+              sub={`${kpis ? formatNum(kpis.compras_entrada) : '—'} compras · ticket ${ticket(kpis?.receita_entrada, kpis?.compras_entrada)}`}
+              loading={loading}
+            />
+            <KPICard
+              label="High Ticket"
+              value={kpis ? formatBRL(kpis.receita_high_ticket) : '—'}
+              sub={`${kpis ? formatNum(kpis.compras_high_ticket) : '—'} vendas · ticket ${ticket(kpis?.receita_high_ticket, kpis?.compras_high_ticket)}`}
+              loading={loading}
+            />
+            {/* Sempre o número global — por isso o rótulo diz "geral", para não
+                ser lido como parte do lançamento filtrado ao lado. */}
+            <KPICard
+              label="Sem Tag (geral)"
+              value={kpis ? formatBRL(kpis.receita_sem_tag) : '—'}
+              sub={`${kpis ? formatNum(kpis.compras_sem_tag) : '—'} compras · ${formatPercent(pctSemTag)} do faturamento`}
+              tone="cost"
+              loading={loading}
+            />
           </div>
           <div className="mt-3.5">
             <PillRow>
               <Pill
-                label="ROI"
-                value={roi}
+                label="ROAS"
+                value={roas}
                 tone={kpis && kpis.total_receita >= kpis.total_gasto ? 'good' : 'bad'}
                 loading={loading}
               />
+              <Pill
+                label="Lucro"
+                value={formatBRL(lucro)}
+                tone={lucro != null && lucro >= 0 ? 'good' : 'bad'}
+                loading={loading}
+              />
+              <Pill label="Investido" value={kpis ? formatBRL(kpis.total_gasto) : '—'} tone="spend" loading={loading} />
             </PillRow>
           </div>
+
+          {rpcDesatualizada && (
+            <div className="mt-3.5">
+              <Callout>
+                A <code>fn_funil_kpis</code> do Supabase ainda é a versão antiga: a receita está
+                100x inflada e não inclui o high ticket. Rode <code>sql/fix_fn_funil_kpis.sql</code>.
+              </Callout>
+            </div>
+          )}
+
+          {/* A compra não guarda lançamento — ela é atribuída casando e-mail/telefone
+              com cadastroClientes, e só ~43% casam. Sem esta nota, o valor filtrado
+              parece "o lançamento vendeu pouco" em vez de "não deu para atribuir". */}
+          {!rpcDesatualizada && pctSemTag != null && (
+            <div className="mt-3.5">
+              <Callout>
+                {lancamento ? (
+                  <>
+                    <strong>{lancamento}</strong> responde por{' '}
+                    {formatPercent(kpis?.cobertura_receita)} do faturamento. A compra não guarda
+                    lançamento — é atribuída casando e-mail/telefone com o cadastro, e{' '}
+                    {formatPercent(pctSemTag)} da receita não casa com nenhum. Trate o valor do
+                    lançamento como piso, não como total.
+                  </>
+                ) : (
+                  <>
+                    {formatPercent(pctSemTag)} do faturamento ({formatBRL(kpis?.receita_sem_tag)})
+                    não casa com lançamento nenhum — a compra não guarda a tag e o cadastro
+                    correspondente está sem <code>lancamento</code> preenchido. É por isso que a
+                    soma dos lançamentos fica bem abaixo deste total.
+                  </>
+                )}
+              </Callout>
+            </div>
+          )}
         </section>
 
         <BrandFooter />

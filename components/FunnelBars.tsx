@@ -4,8 +4,9 @@ export interface FunnelStep {
   value: string
   /** Largura da barra, 0–100. */
   width: number
-  /** Conversão vs. a etapa anterior, exibida no badge entre as barras. */
-  pct?: number
+  /** Conversão vs. a etapa anterior, exibida no badge entre as barras.
+   *  null quando a RPC não consegue calcular (denominador zero). */
+  pct?: number | null
 }
 
 // Gradientes em sequência (§3.6).
@@ -32,7 +33,7 @@ export default function FunnelBars({ title, sub, steps, loading }: FunnelBarsPro
       <div className="mt-6">
         {steps.map((s, i) => (
           <div key={s.label}>
-            {i > 0 && s.pct !== undefined && (
+            {i > 0 && s.pct != null && (
               <div className="flex justify-center my-2">
                 <span className="rounded-md border border-[rgba(83,166,104,0.2)] bg-[rgba(83,166,104,0.12)] px-2.5 py-[3px] text-xs font-bold text-ink-70">
                   {s.pct.toFixed(1)}%
