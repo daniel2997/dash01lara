@@ -140,6 +140,36 @@ COMMENT ON VIEW public.vw_campanhas IS
   'campaigns_bms com o lancamento resolvido: launch_tag, senao alias traduzido, senao a tag crua do nome da campanha.';
 
 
+-- Diagnostico: toda tag que aparece no nome das campanhas, e se ela tem alias.
+--
+-- O fallback para a tag crua e silencioso: quando um lancamento novo chega com
+-- uma tag que ninguem cadastrou, o dash passa a mostra-la como se fosse um
+-- lancamento proprio, e ninguem percebe. Foi assim que LA29JUL26 e LA30JUL26
+-- passaram batido. Rode isto depois de cada lancamento novo: o que aparecer
+-- com status 'SEM ALIAS' precisa de decisao — ou cadastrar o alias, ou
+-- confirmar que a tag ja esta certa.
+CREATE OR REPLACE VIEW public.vw_tags_campanha AS
+  SELECT
+    t.tag_bruta,
+    a.lancamento                                  AS lancamento_mapeado,
+    CASE WHEN a.alias IS NULL THEN 'SEM ALIAS — conferir'
+         ELSE 'ok' END                            AS status,
+    COUNT(*)                                      AS linhas,
+    ROUND(SUM(b.gasto::numeric), 2)               AS gasto,
+    MIN(b.data)                                   AS primeira_data,
+    MAX(b.data)                                   AS ultima_data
+  FROM public.campaigns_bms b
+  LEFT JOIN LATERAL (
+    SELECT substring(b."Campanha" FROM '^\s*\[\s*([A-Za-z0-9]+)\s*\]') AS tag_bruta
+  ) t ON TRUE
+  LEFT JOIN public.lancamento_alias a ON a.alias = t.tag_bruta
+  GROUP BY t.tag_bruta, a.lancamento, a.alias
+  ORDER BY 3, 5 DESC;
+
+COMMENT ON VIEW public.vw_tags_campanha IS
+  'Tags encontradas no nome das campanhas e se tem alias cadastrado. Rodar apos cada lancamento novo: SEM ALIAS = decisao pendente.';
+
+
 -- ────────────────────────────────────────────────────────────────────────────
 -- 3) Vendas
 -- ────────────────────────────────────────────────────────────────────────────
@@ -474,6 +504,9 @@ GRANT EXECUTE ON FUNCTION public.fn_parse_valor(text)               TO anon, aut
 -- 7) RESULTADO — ultima instrucao, e o que aparece depois do Run.
 --    receita 0 e esperado enquanto workcompra/mlcaprovado estiverem vazias.
 -- ────────────────────────────────────────────────────────────────────────────
+-- Tags das campanhas: o que estiver 'SEM ALIAS' precisa de decisao.
+SELECT * FROM public.vw_tags_campanha;
+
 SELECT
   (public.fn_funil_kpis(NULL)->>'total_leads')::bigint    AS leads,
   (public.fn_funil_kpis(NULL)->>'privado')::bigint        AS privado,
