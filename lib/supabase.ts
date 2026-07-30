@@ -39,9 +39,15 @@ export function withTimeout<T>(promiseLike: PromiseLike<T>, ms: number): Promise
  */
 export async function fetchAll<T = Record<string, unknown>>(
   table: string,
-  opts: { lancamento?: string; lancamentoCol?: string; select?: string } = {}
+  opts: {
+    lancamento?: string;
+    lancamentoCol?: string;
+    select?: string;
+    /** filtro extra de igualdade (ex.: status = 'paid') */
+    filtro?: { col: string; valor: string };
+  } = {}
 ): Promise<T[]> {
-  const { lancamento, lancamentoCol = "lancamento", select = "*" } = opts;
+  const { lancamento, lancamentoCol = "lancamento", select = "*", filtro } = opts;
   const PAGE = 1000;
   const rows: T[] = [];
   let from = 0;
@@ -55,6 +61,7 @@ export async function fetchAll<T = Record<string, unknown>>(
         .select(select)
         .range(from, from + PAGE - 1);
       if (lancamento) query = query.eq(lancamentoCol, lancamento);
+      if (filtro) query = query.eq(filtro.col, filtro.valor);
 
       const result = await withTimeout(query, QUERY_TIMEOUT_MS);
       if (result.error) {

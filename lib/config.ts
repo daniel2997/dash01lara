@@ -5,9 +5,9 @@
  *   Tráfego (Meta) → Lead Page (cadastro) → Privado → Grupo
  *   → Workshop (produto de entrada) → Mentoria (high-ticket)
  *
- * As etapas com `disponivel: false` ainda não têm tabela no Supabase. Quando
- * as tabelas de venda existirem, é só marcar `disponivel: true` aqui — o resto
- * do dashboard se adapta sozinho, sem tocar em query nem em componente.
+ * As etapas com `disponivel: false` ainda não têm dado utilizável no Supabase.
+ * Quando tiverem, é só marcar `disponivel: true` aqui — o resto do dashboard se
+ * adapta sozinho, sem tocar em query nem em componente.
  */
 
 export const LANCAMENTO_PADRAO =
@@ -23,6 +23,12 @@ export interface EtapaFunil {
   lancamentoCol?: string;
   /** coluna de valor (R$) quando é uma etapa de venda */
   valorCol?: string;
+  /**
+   * Filtro extra de igualdade aplicado na consulta. Usado nas etapas de venda
+   * pra contar só o que foi pago de verdade — a hubla grava reembolso e
+   * chargeback na mesma tabela, com outro status.
+   */
+  filtro?: { col: string; valor: string };
   /** cor do tema para gráficos/cards */
   cor: string;
   /** já temos dados/tabela pra essa etapa? */
@@ -64,13 +70,13 @@ export const FUNIL: EtapaFunil[] = [
     key: "workshop",
     label: "Workshop",
     descricao: "Compraram o ingresso do workshop",
-    tabela: "workcompra",
+    // Atenção: a tabela aqui é "workcompras", no plural — não "workcompra".
+    tabela: "workcompras",
     lancamentoCol: "lancamento",
     valorCol: "valor",
+    filtro: { col: "status", valor: "paid" },
     cor: "#2f6f5c",
-    // As tabelas de venda ainda não existem neste projeto do Supabase.
-    // Vire para true quando existirem — nada mais precisa mudar.
-    disponivel: false,
+    disponivel: true,
     venda: true,
   },
   {
@@ -78,7 +84,10 @@ export const FUNIL: EtapaFunil[] = [
     label: "Mentoria",
     descricao: "Compraram a mentoria (high-ticket)",
     tabela: "mlcaprovado",
-    lancamentoCol: "lancamento",
+    // A mlcaprovado existe e está vazia, e o schema dela é só
+    // email/telefone/created_at/nome/valor: não tem coluna de lançamento nem
+    // de status. Quando as vendas da mentoria começarem a cair, é preciso
+    // decidir como separar por lançamento antes de virar `disponivel`.
     valorCol: "valor",
     cor: "#075743",
     disponivel: false,

@@ -57,6 +57,7 @@ export async function GET(req: NextRequest) {
           lancamento,
           lancamentoCol: e.lancamentoCol,
           select: `${e.valorCol}`,
+          filtro: e.filtro,
         });
         const valor = rows.reduce(
           (s, r) => s + (parseFloat(String(r[e.valorCol!])) || 0),

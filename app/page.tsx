@@ -114,7 +114,7 @@ export default function Overview() {
         <KpiCard
           title="Receita"
           value={formatCurrency(receita)}
-          subtitle="Ingressos + mentoria (em breve)"
+          subtitle="Ingressos do workshop (mentoria em breve)"
           color="#075743"
         />
         <KpiCard
