@@ -122,6 +122,10 @@ export const COL = {
 export const ALIAS_LANCAMENTO: Record<string, string> = {
   LA29JUL26: "LA03AGOSTO26",
   LA30JUL26: "LA03AGOSTO26",
+  LA31JUL26: "LA03AGOSTO26",
+  LA01AGO26: "LA03AGOSTO26",
+  LA02AGO26: "LA03AGOSTO26",
+  LA03AGO26: "LA03AGOSTO26",
 };
 
 /** Extrai a tag entre colchetes do nome da campanha e aplica o alias. */

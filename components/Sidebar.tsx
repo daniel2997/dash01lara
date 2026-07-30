@@ -76,20 +76,33 @@ export default function Sidebar() {
         </div>
         <div>
           <label className="text-[10px] text-ink-45 uppercase tracking-[0.09em] block mb-1.5">
-            Dia (20:30→20:30)
+            Filtrar por dia
           </label>
-          <select
-            value={dia || ""}
-            onChange={(e) => setDia(e.target.value || null)}
-            style={{ width: "100%" }}
-          >
-            <option value="">Todos os dias</option>
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              onClick={() => setDia(null)}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                !dia
+                  ? "bg-accent text-obsidian"
+                  : "bg-inner text-ink-60 hover:text-ink"
+              }`}
+            >
+              Todos
+            </button>
             {dias.map((d) => (
-              <option key={d.dia} value={d.dia}>
-                {d.dia.split("-").reverse().slice(0, 2).join("/")} — {d.leads}L / {d.compras}V
-              </option>
+              <button
+                key={d.dia}
+                onClick={() => setDia(d.dia)}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  dia === d.dia
+                    ? "bg-accent text-obsidian"
+                    : "bg-inner text-ink-60 hover:text-ink"
+                }`}
+              >
+                {d.dia.split("-")[2]}/{d.dia.split("-")[1]}
+              </button>
             ))}
-          </select>
+          </div>
         </div>
       </div>
 
