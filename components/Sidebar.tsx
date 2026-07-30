@@ -1,134 +1,64 @@
-"use client";
+'use client'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { TrendingUp, BarChart2, Users, ShoppingBag } from 'lucide-react'
 
-import Image from "next/image";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { LayoutDashboard, TrendingUp, BarChart2, Menu, X } from "lucide-react";
-import { useLaunch } from "./LaunchContext";
-
-const NAV = [
-  { href: "/", label: "Visão Geral", icon: LayoutDashboard },
-  { href: "/funil", label: "Funil", icon: TrendingUp },
-  { href: "/midia", label: "Mídia Paga", icon: BarChart2 },
-];
-
-/** Marca — §3.1. O manuscrito rotacionado é assinatura, não decoração. */
-function Marca({ compacto = false }: { compacto?: boolean }) {
-  return (
-    <div className="flex items-center gap-3 min-w-0">
-      <Image
-        src="/logo-tile.png"
-        alt="Mete Marcha"
-        width={compacto ? 30 : 44}
-        height={compacto ? 30 : 44}
-        className="block rounded-[11px] shrink-0"
-        style={{ boxShadow: "0 0 24px rgba(83,166,104,0.3)" }}
-        priority
-      />
-      <div className="min-w-0">
-        {!compacto && (
-          <p className="marker text-[13px] text-accent -rotate-2 leading-none mb-1.5">
-            mete marcha
-          </p>
-        )}
-        <p className="text-sm font-bold uppercase tracking-tight text-ink leading-none">
-          Dash<span className="text-accent">lara</span>
-        </p>
-      </div>
-    </div>
-  );
-}
+const nav = [
+  { href: '/funil', label: 'Funil', icon: TrendingUp },
+  { href: '/midia', label: 'Mídia Paga', icon: BarChart2 },
+]
 
 export default function Sidebar() {
-  const pathname = usePathname();
-  const { lancamento, setLancamento, lancamentos } = useLaunch();
-  const [open, setOpen] = useState(false);
+  const path = usePathname()
 
-  const opcoes = lancamentos.length
-    ? lancamentos
-    : lancamento
-    ? [lancamento]
-    : [];
-
-  const content = (
-    <div className="flex flex-col h-full">
-      <div className="px-5 pt-6 pb-4 border-b border-chrome">
-        <Marca />
+  return (
+    <aside className="w-52 flex-shrink-0 flex flex-col border-r border-zinc-800/60 bg-zinc-950">
+      {/* Logo */}
+      <div className="px-4 py-4 border-b border-zinc-800/60">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+            <BarChart2 size={13} className="text-white" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-white leading-none">Dashlara</p>
+            <p className="text-[10px] text-zinc-500 mt-0.5">eventolaracastilho</p>
+          </div>
+        </div>
       </div>
 
-      <div className="px-4 py-4">
-        <label className="text-[10px] text-ink-45 uppercase tracking-[0.09em] block mb-1.5">
-          Lançamento
-        </label>
-        <select
-          value={lancamento}
-          onChange={(e) => setLancamento(e.target.value)}
-          style={{ width: "100%" }}
-        >
-          {opcoes.map((l) => (
-            <option key={l} value={l}>
-              {l}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <nav className="flex-1 px-3 space-y-1">
-        {NAV.map(({ href, label, icon: Icon }) => {
-          const active =
-            href === "/" ? pathname === "/" : pathname.startsWith(href);
+      {/* Nav */}
+      <nav className="flex-1 p-2 space-y-0.5">
+        {nav.map(({ href, label, icon: Icon }) => {
+          const active = path === href || path.startsWith(href + '/')
           return (
             <Link
               key={href}
               href={href}
-              onClick={() => setOpen(false)}
-              className={`sidebar-link ${active ? "active" : ""}`}
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all ${
+                active
+                  ? 'bg-indigo-500/15 text-indigo-400 font-medium'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
+              }`}
             >
-              <Icon size={16} />
+              <Icon size={15} className={active ? 'text-indigo-400' : 'text-zinc-500'} />
               {label}
             </Link>
-          );
+          )
         })}
       </nav>
 
-      <div className="px-5 py-4 text-[10px] text-ink-40 uppercase tracking-[0.12em]">
-        Lara Castilho · {new Date().getFullYear()}
-      </div>
-    </div>
-  );
-
-  return (
-    <>
-      {/* Topbar mobile */}
-      <div className="lg:hidden flex items-center justify-between px-4 py-3 border-b border-chrome sticky top-0 z-30 bg-obsidian">
-        <Marca compacto />
-        <button
-          onClick={() => setOpen((o) => !o)}
-          className="text-ink-60"
-          aria-label={open ? "Fechar menu" : "Abrir menu"}
-        >
-          {open ? <X size={22} /> : <Menu size={22} />}
-        </button>
-      </div>
-
-      {/* Sidebar desktop */}
-      <aside className="hidden lg:flex fixed inset-y-0 left-0 w-60 border-r border-chrome bg-obsidian z-20">
-        {content}
-      </aside>
-
-      {/* Drawer mobile */}
-      {open && (
-        <div className="lg:hidden fixed inset-0 z-40">
-          <div
-            className="absolute inset-0 bg-black/60"
-            onClick={() => setOpen(false)}
-          />
-          <aside className="absolute inset-y-0 left-0 w-64 border-r border-chrome bg-obsidian">
-            {content}
-          </aside>
+      {/* Footer */}
+      <div className="p-3 border-t border-zinc-800/60">
+        <div className="flex items-center gap-2.5 px-2 py-1.5">
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xs font-semibold text-white shadow">
+            AL
+          </div>
+          <div>
+            <p className="text-xs font-medium text-zinc-300 leading-none">Ana Lisboa</p>
+            <p className="text-[10px] text-zinc-500 mt-0.5">Admin</p>
+          </div>
         </div>
-      )}
-    </>
-  );
+      </div>
+    </aside>
+  )
 }
