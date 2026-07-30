@@ -79,7 +79,7 @@ export default function MidiaDashboard() {
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const sb = getSupabase()
+      const sb = getSupabase() as any
       const [kpisRes, dateRes, campRes, conjRes, adRes, lancRes] = await Promise.all([
         sb.rpc('fn_campaigns_kpis', { p_lancamento: lancamento }),
         sb.rpc('fn_campaigns_by_date', { p_lancamento: lancamento }),

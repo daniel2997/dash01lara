@@ -30,7 +30,7 @@ export default function FunilDashboard() {
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const sb = getSupabase()
+      const sb = getSupabase() as any
       const [kpisRes, pagesRes, timelineRes, lancRes, diasRes] = await Promise.all([
         sb.rpc('fn_funil_kpis', { p_lancamento: lancamento, p_dia: dia }),
         sb.rpc('fn_leads_by_pagina', { p_lancamento: lancamento, p_limit: 8, p_dia: dia }),
