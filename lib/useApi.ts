@@ -5,7 +5,7 @@ import { useLaunch } from "@/components/LaunchContext";
 
 /** Busca uma rota /api passando o lançamento selecionado como query. */
 export function useApi<T>(path: string) {
-  const { lancamento } = useLaunch();
+  const { lancamento, dia } = useLaunch();
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -15,9 +15,10 @@ export function useApi<T>(path: string) {
     setLoading(true);
     setError(false);
 
-    const url = `${path}${path.includes("?") ? "&" : "?"}lancamento=${encodeURIComponent(
+    let url = `${path}${path.includes("?") ? "&" : "?"}lancamento=${encodeURIComponent(
       lancamento
     )}`;
+    if (dia) url += `&dia=${encodeURIComponent(dia)}`;
 
     fetch(url)
       .then((r) => {
@@ -31,7 +32,7 @@ export function useApi<T>(path: string) {
     return () => {
       ativo = false;
     };
-  }, [path, lancamento]);
+  }, [path, lancamento, dia]);
 
   return { data, loading, error };
 }

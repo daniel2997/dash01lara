@@ -42,7 +42,7 @@ function Marca({ compacto = false }: { compacto?: boolean }) {
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { lancamento, setLancamento, lancamentos } = useLaunch();
+  const { lancamento, setLancamento, lancamentos, dia, setDia, dias } = useLaunch();
   const [open, setOpen] = useState(false);
 
   const opcoes = lancamentos.length
@@ -57,21 +57,40 @@ export default function Sidebar() {
         <Marca />
       </div>
 
-      <div className="px-4 py-4">
-        <label className="text-[10px] text-ink-45 uppercase tracking-[0.09em] block mb-1.5">
-          Lançamento
-        </label>
-        <select
-          value={lancamento}
-          onChange={(e) => setLancamento(e.target.value)}
-          style={{ width: "100%" }}
-        >
-          {opcoes.map((l) => (
-            <option key={l} value={l}>
-              {l}
-            </option>
-          ))}
-        </select>
+      <div className="px-4 py-4 space-y-3">
+        <div>
+          <label className="text-[10px] text-ink-45 uppercase tracking-[0.09em] block mb-1.5">
+            Lançamento
+          </label>
+          <select
+            value={lancamento}
+            onChange={(e) => setLancamento(e.target.value)}
+            style={{ width: "100%" }}
+          >
+            {opcoes.map((l) => (
+              <option key={l} value={l}>
+                {l}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="text-[10px] text-ink-45 uppercase tracking-[0.09em] block mb-1.5">
+            Dia (20:30→20:30)
+          </label>
+          <select
+            value={dia || ""}
+            onChange={(e) => setDia(e.target.value || null)}
+            style={{ width: "100%" }}
+          >
+            <option value="">Todos os dias</option>
+            {dias.map((d) => (
+              <option key={d.dia} value={d.dia}>
+                {d.dia.split("-").reverse().slice(0, 2).join("/")} — {d.leads}L / {d.compras}V
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <nav className="flex-1 px-3 space-y-1">
