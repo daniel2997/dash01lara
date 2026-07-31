@@ -38,6 +38,15 @@ interface AdsResp {
 interface DiarioResp {
   dias: { dia: string; gasto: number; leads: number; privado: number; grupos: number; compras: number; receita: number }[];
 }
+interface VendaRankItem {
+  nome: string;
+  vendas: number;
+  receita: number;
+}
+interface VendasRankResp {
+  porCampanha: VendaRankItem[];
+  porCriativo: VendaRankItem[];
+}
 
 const fmtDia = (v: string) => {
   try {
@@ -54,6 +63,7 @@ export default function Overview() {
   const { data: cadastros } = useApi<CadastrosResp>("/api/cadastros");
   const { data: ads } = useApi<AdsResp>("/api/ads");
   const { data: diario } = useApi<DiarioResp>("/api/funil-diario");
+  const { data: vendasRank } = useApi<VendasRankResp>("/api/vendas-rank");
 
   if (loading || !funil) return <Loading />;
 
@@ -227,7 +237,65 @@ export default function Overview() {
         </Card>
       )}
 
-      {/* Melhores criativos e campanhas */}
+      {/* Vendas por campanha e criativo */}
+      {vendasRank && (vendasRank.porCampanha.length > 0 || vendasRank.porCriativo.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+          <Card
+            title="Vendas por Campanha"
+            right={<span className="text-[10px] text-ink-45 uppercase tracking-wider">por vendas</span>}
+          >
+            <div className="space-y-2">
+              {(vendasRank.porCampanha ?? []).slice(0, 10).map((item) => {
+                const max = vendasRank.porCampanha[0]?.vendas || 1;
+                return (
+                  <div key={item.nome}>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="truncate mr-2 text-ink-70">{item.nome}</span>
+                      <span className="font-semibold tabular-nums shrink-0">
+                        {item.vendas} · {formatCurrency(item.receita)}
+                      </span>
+                    </div>
+                    <div className="h-2 rounded-full bg-inner overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${(item.vendas / max) * 100}%`, background: "#2f6f5c", minWidth: 6 }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+          <Card
+            title="Vendas por Criativo"
+            right={<span className="text-[10px] text-ink-45 uppercase tracking-wider">por vendas</span>}
+          >
+            <div className="space-y-2">
+              {(vendasRank.porCriativo ?? []).slice(0, 10).map((item) => {
+                const max = vendasRank.porCriativo[0]?.vendas || 1;
+                return (
+                  <div key={item.nome}>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="truncate mr-2 text-ink-70">{item.nome}</span>
+                      <span className="font-semibold tabular-nums shrink-0">
+                        {item.vendas} · {formatCurrency(item.receita)}
+                      </span>
+                    </div>
+                    <div className="h-2 rounded-full bg-inner overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${(item.vendas / max) * 100}%`, background: "#075743", minWidth: 6 }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Melhores criativos e campanhas por leads */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card
           title="Melhores Criativos"
