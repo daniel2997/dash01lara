@@ -25,7 +25,7 @@ interface FunilResp {
 }
 interface MidiaResp {
   vazio: boolean;
-  totais: { gasto: number; leads: number; cpl: number; clicks: number };
+  totais: { gasto: number; leads: number; cpl: number; clicks: number; lpv: number };
 }
 interface CadastrosResp {
   total: number;
@@ -128,9 +128,9 @@ export default function Overview() {
           color={receita >= gasto && gasto > 0 ? "#3ea98a" : "#e79a86"}
         />
         <KpiCard
-          title="Cliques"
-          value={formatInt(midia?.totais.clicks ?? 0)}
-          subtitle="Nos anúncios"
+          title="Page Views"
+          value={formatInt(midia?.totais.lpv ?? 0)}
+          subtitle="Visualizações da página"
           color="#53a668"
         />
       </div>

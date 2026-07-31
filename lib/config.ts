@@ -23,6 +23,8 @@ export interface EtapaFunil {
   lancamentoCol?: string;
   /** coluna de valor (R$) quando é uma etapa de venda */
   valorCol?: string;
+  /** filtro extra de igualdade (ex: status = 'paid') */
+  filtro?: { col: string; valor: string };
   /** cor do tema para gráficos/cards */
   cor: string;
   /** já temos dados/tabela pra essa etapa? */
@@ -64,13 +66,12 @@ export const FUNIL: EtapaFunil[] = [
     key: "workshop",
     label: "Workshop",
     descricao: "Compraram o ingresso do workshop",
-    tabela: "workcompra",
+    tabela: "workcompras",
     lancamentoCol: "lancamento",
     valorCol: "valor",
+    filtro: { col: "status", valor: "paid" },
     cor: "#2f6f5c",
-    // As tabelas de venda ainda não existem neste projeto do Supabase.
-    // Vire para true quando existirem — nada mais precisa mudar.
-    disponivel: false,
+    disponivel: true,
     venda: true,
   },
   {
