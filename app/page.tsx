@@ -40,6 +40,7 @@ interface DiarioResp {
 }
 interface VendaRankItem {
   nome: string;
+  leads: number;
   vendas: number;
   receita: number;
 }
@@ -242,25 +243,31 @@ export default function Overview() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
           <Card
             title="Vendas por Campanha"
-            right={<span className="text-[10px] text-ink-45 uppercase tracking-wider">por vendas</span>}
+            right={<span className="text-[10px] text-ink-45 uppercase tracking-wider">leads → vendas</span>}
           >
-            <div className="space-y-2">
+            <div className="space-y-3">
               {(vendasRank.porCampanha ?? []).slice(0, 10).map((item) => {
-                const max = vendasRank.porCampanha[0]?.vendas || 1;
+                const max = vendasRank.porCampanha[0]?.leads || 1;
+                const conv = item.leads > 0 ? ((item.vendas / item.leads) * 100).toFixed(1) : "0";
                 return (
                   <div key={item.nome}>
                     <div className="flex justify-between text-xs mb-1">
                       <span className="truncate mr-2 text-ink-70">{item.nome}</span>
                       <span className="font-semibold tabular-nums shrink-0">
-                        {item.vendas} · {formatCurrency(item.receita)}
+                        {formatInt(item.leads)} leads → {item.vendas} vendas ({conv}%)
                       </span>
                     </div>
-                    <div className="h-2 rounded-full bg-inner overflow-hidden">
+                    <div className="h-2 rounded-full bg-inner overflow-hidden relative">
                       <div
-                        className="h-full rounded-full"
+                        className="h-full rounded-full absolute"
+                        style={{ width: `${(item.leads / max) * 100}%`, background: "#86e0a3", opacity: 0.3 }}
+                      />
+                      <div
+                        className="h-full rounded-full absolute"
                         style={{ width: `${(item.vendas / max) * 100}%`, background: "#2f6f5c", minWidth: 6 }}
                       />
                     </div>
+                    <div className="text-[10px] text-ink-45 mt-0.5">{formatCurrency(item.receita)}</div>
                   </div>
                 );
               })}
@@ -268,25 +275,31 @@ export default function Overview() {
           </Card>
           <Card
             title="Vendas por Criativo"
-            right={<span className="text-[10px] text-ink-45 uppercase tracking-wider">por vendas</span>}
+            right={<span className="text-[10px] text-ink-45 uppercase tracking-wider">leads → vendas</span>}
           >
-            <div className="space-y-2">
+            <div className="space-y-3">
               {(vendasRank.porCriativo ?? []).slice(0, 10).map((item) => {
-                const max = vendasRank.porCriativo[0]?.vendas || 1;
+                const max = vendasRank.porCriativo[0]?.leads || 1;
+                const conv = item.leads > 0 ? ((item.vendas / item.leads) * 100).toFixed(1) : "0";
                 return (
                   <div key={item.nome}>
                     <div className="flex justify-between text-xs mb-1">
                       <span className="truncate mr-2 text-ink-70">{item.nome}</span>
                       <span className="font-semibold tabular-nums shrink-0">
-                        {item.vendas} · {formatCurrency(item.receita)}
+                        {formatInt(item.leads)} leads → {item.vendas} vendas ({conv}%)
                       </span>
                     </div>
-                    <div className="h-2 rounded-full bg-inner overflow-hidden">
+                    <div className="h-2 rounded-full bg-inner overflow-hidden relative">
                       <div
-                        className="h-full rounded-full"
+                        className="h-full rounded-full absolute"
+                        style={{ width: `${(item.leads / max) * 100}%`, background: "#86e0a3", opacity: 0.3 }}
+                      />
+                      <div
+                        className="h-full rounded-full absolute"
                         style={{ width: `${(item.vendas / max) * 100}%`, background: "#075743", minWidth: 6 }}
                       />
                     </div>
+                    <div className="text-[10px] text-ink-45 mt-0.5">{formatCurrency(item.receita)}</div>
                   </div>
                 );
               })}
