@@ -5,9 +5,9 @@
  *   Tráfego (Meta) → Lead Page (cadastro) → Privado → Grupo
  *   → Workshop (produto de entrada) → Mentoria (high-ticket)
  *
- * As etapas com `disponivel: false` ainda não têm dado utilizável no Supabase.
- * Quando tiverem, é só marcar `disponivel: true` aqui — o resto do dashboard se
- * adapta sozinho, sem tocar em query nem em componente.
+ * As etapas com `disponivel: false` ainda não têm tabela no Supabase. Quando
+ * as tabelas de venda existirem, é só marcar `disponivel: true` aqui — o resto
+ * do dashboard se adapta sozinho, sem tocar em query nem em componente.
  */
 
 export const LANCAMENTO_PADRAO =
@@ -23,12 +23,6 @@ export interface EtapaFunil {
   lancamentoCol?: string;
   /** coluna de valor (R$) quando é uma etapa de venda */
   valorCol?: string;
-  /**
-   * Filtro extra de igualdade aplicado na consulta. Usado nas etapas de venda
-   * pra contar só o que foi pago de verdade — a hubla grava reembolso e
-   * chargeback na mesma tabela, com outro status.
-   */
-  filtro?: { col: string; valor: string };
   /** cor do tema para gráficos/cards */
   cor: string;
   /** já temos dados/tabela pra essa etapa? */
@@ -70,13 +64,13 @@ export const FUNIL: EtapaFunil[] = [
     key: "workshop",
     label: "Workshop",
     descricao: "Compraram o ingresso do workshop",
-    // Atenção: a tabela aqui é "workcompras", no plural — não "workcompra".
-    tabela: "workcompras",
+    tabela: "workcompra",
     lancamentoCol: "lancamento",
     valorCol: "valor",
-    filtro: { col: "status", valor: "paid" },
     cor: "#2f6f5c",
-    disponivel: true,
+    // As tabelas de venda ainda não existem neste projeto do Supabase.
+    // Vire para true quando existirem — nada mais precisa mudar.
+    disponivel: false,
     venda: true,
   },
   {
@@ -84,10 +78,7 @@ export const FUNIL: EtapaFunil[] = [
     label: "Mentoria",
     descricao: "Compraram a mentoria (high-ticket)",
     tabela: "mlcaprovado",
-    // A mlcaprovado existe e está vazia, e o schema dela é só
-    // email/telefone/created_at/nome/valor: não tem coluna de lançamento nem
-    // de status. Quando as vendas da mentoria começarem a cair, é preciso
-    // decidir como separar por lançamento antes de virar `disponivel`.
+    lancamentoCol: "lancamento",
     valorCol: "valor",
     cor: "#075743",
     disponivel: false,
@@ -95,12 +86,6 @@ export const FUNIL: EtapaFunil[] = [
   },
 ];
 
-/**
- * Colunas reais da cadastroClientes neste projeto do Supabase.
- * Centralizado aqui porque os nomes mudam entre projetos — o dash de origem
- * usava `campanha`/`pagina`/`data`, aqui é `utm_nome_campanha`/`nome_pagina`/
- * `data_criacao`. Se o schema mudar de novo, é só mexer neste bloco.
- */
 export const COL = {
   campanha: "utm_nome_campanha",
   conjunto: "utm_nome_conjunto",
@@ -110,31 +95,17 @@ export const COL = {
   data: "data_criacao",
 } as const;
 
-/**
- * campaigns_bms.launch_tag chega NULL do processo de ingestão, e a tag que
- * existe no nome da campanha ("[LA29JUL26]_[CADASTRO]_...") está errada — o
- * gestor digitou a data errada. Este mapa traduz o que foi digitado para o
- * lançamento de verdade.
- *
- * Quando o gestor errar de novo, é uma linha aqui. Se a ingestão passar a
- * gravar launch_tag corretamente, ela tem precedência e este mapa fica inerte.
- */
 export const ALIAS_LANCAMENTO: Record<string, string> = {
   LA29JUL26: "LA03AGOSTO26",
   LA30JUL26: "LA03AGOSTO26",
-  LA31JUL26: "LA03AGOSTO26",
-  LA01AGO26: "LA03AGOSTO26",
-  LA02AGO26: "LA03AGOSTO26",
-  LA03AGO26: "LA03AGOSTO26",
 };
 
-/** Extrai a tag entre colchetes do nome da campanha e aplica o alias. */
 export function lancamentoDaCampanha(
   nome: string | null | undefined,
   launchTag?: string | null
 ): string | null {
   const tag = launchTag?.trim();
-  if (tag) return tag; // ingestão preencheu: ganha de tudo
+  if (tag) return tag;
   const m = /^\s*\[\s*([A-Za-z0-9]+)\s*\]/.exec(nome || "");
   if (!m) return null;
   return ALIAS_LANCAMENTO[m[1]] ?? m[1];

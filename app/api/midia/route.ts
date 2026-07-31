@@ -52,9 +52,24 @@ export async function GET(req: NextRequest) {
     { gasto: 0, impressoes: 0, clicks: 0, reach: 0, leads: 0, lpv: 0, checkout: 0 }
   );
 
-  const cpl = t.leads > 0 ? t.gasto / t.leads : 0;
-  const cpc = t.clicks > 0 ? t.gasto / t.clicks : 0;
-  const cpm = t.impressoes > 0 ? (t.gasto / t.impressoes) * 1000 : 0;
+  // Gasto operacional (20:30→20:30) da gasto_horario
+  const gastoHorario = await fetchAll<{ data: string; hora: number; gasto_total: number }>(
+    "gasto_horario",
+    { select: "data,hora,gasto_total" }
+  );
+  const gastoDiaOp: Record<string, number> = {};
+  for (const h of gastoHorario) {
+    const dOp = h.hora >= 21
+      ? new Date(new Date(h.data).getTime() + 86400000).toISOString().slice(0, 10)
+      : h.data;
+    gastoDiaOp[dOp] = (gastoDiaOp[dOp] || 0) + num(h.gasto_total);
+  }
+  const gastoOp = Object.values(gastoDiaOp).reduce((s, v) => s + v, 0);
+  const gasto = gastoOp || t.gasto;
+
+  const cpl = t.leads > 0 ? gasto / t.leads : 0;
+  const cpc = t.clicks > 0 ? gasto / t.clicks : 0;
+  const cpm = t.impressoes > 0 ? (gasto / t.impressoes) * 1000 : 0;
   const ctr = t.impressoes > 0 ? (t.clicks / t.impressoes) * 100 : 0;
 
   // Por campanha
@@ -97,9 +112,15 @@ export async function GET(req: NextRequest) {
     const d = (r.data || "").slice(0, 10);
     if (!d) continue;
     if (!diaMap[d]) diaMap[d] = { data: d, gasto: 0, clicks: 0, leads: 0 };
-    diaMap[d].gasto += num(r.gasto);
     diaMap[d].clicks += num(r.clicks);
     diaMap[d].leads += pint(r.leads);
+  }
+  // Sobrescreve gasto com o operacional por dia
+  for (const d of Object.keys(diaMap)) {
+    diaMap[d].gasto = gastoDiaOp[d] || 0;
+  }
+  for (const d of Object.keys(gastoDiaOp)) {
+    if (!diaMap[d]) diaMap[d] = { data: d, gasto: gastoDiaOp[d], clicks: 0, leads: 0 };
   }
   const porDia = Object.values(diaMap).sort((a, b) =>
     a.data.localeCompare(b.data)
@@ -120,7 +141,7 @@ export async function GET(req: NextRequest) {
     {
       lancamento,
       vazio: rows.length === 0,
-      totais: { ...t, cpl, cpc, cpm, ctr },
+      totais: { ...t, gasto, cpl, cpc, cpm, ctr },
       porCampanha,
       porDia,
       outrasTags,
