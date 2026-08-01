@@ -44,9 +44,16 @@ interface VendaRankItem {
   vendas: number;
   receita: number;
 }
+interface RegiaoItem {
+  estado: string;
+  leads: number;
+  vendas: number;
+  conv_pct: number;
+}
 interface VendasRankResp {
   porCampanha: VendaRankItem[];
   porCriativo: VendaRankItem[];
+  porRegiao: RegiaoItem[];
 }
 
 const fmtDia = (v: string) => {
@@ -75,8 +82,11 @@ export default function Overview() {
   const gasto = midia?.totais.gasto ?? 0;
   const receita = funil.receita;
 
+  const vendas = etapaMap.workshop?.total ?? 0;
   const convGrupo =
     cadastrosTotal > 0 ? (grupos / cadastrosTotal) * 100 : 0;
+  const convGrupoVenda = grupos > 0 ? (vendas / grupos) * 100 : 0;
+  const cpa = vendas > 0 ? gasto / vendas : 0;
 
   return (
     <div>
@@ -139,10 +149,16 @@ export default function Overview() {
           color={receita >= gasto && gasto > 0 ? "#3ea98a" : "#e79a86"}
         />
         <KpiCard
-          title="Page Views"
-          value={formatInt(midia?.totais.lpv ?? 0)}
-          subtitle="Visualizações da página"
-          color="#53a668"
+          title="CPA"
+          value={cpa > 0 ? formatCurrency(cpa) : "—"}
+          subtitle="Custo por aquisição (gasto ÷ vendas)"
+          color="#e79a86"
+        />
+        <KpiCard
+          title="Grupo → Venda"
+          value={grupos > 0 ? formatPct(convGrupoVenda) : "—"}
+          subtitle={`${formatInt(vendas)} vendas de ${formatInt(grupos)} no grupo`}
+          color="#2f6f5c"
         />
       </div>
 
@@ -306,6 +322,34 @@ export default function Overview() {
             </div>
           </Card>
         </div>
+      )}
+
+      {/* Vendas por Região */}
+      {vendasRank?.porRegiao && vendasRank.porRegiao.length > 0 && (
+        <Card title="Vendas por Estado" className="mb-6">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-ink-45 text-[10px] uppercase tracking-[0.09em] border-b border-chrome">
+                  <th className="text-left py-2 pr-3">Estado</th>
+                  <th className="text-right py-2 px-3">Leads</th>
+                  <th className="text-right py-2 px-3">Vendas</th>
+                  <th className="text-right py-2 pl-3">Conv %</th>
+                </tr>
+              </thead>
+              <tbody>
+                {vendasRank.porRegiao.map((r) => (
+                  <tr key={r.estado} className="border-b border-chrome/50 hover:bg-white/[0.02]">
+                    <td className="py-2 pr-3 font-semibold text-ink">{r.estado}</td>
+                    <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#86e0a3" }}>{formatInt(r.leads)}</td>
+                    <td className="py-2 px-3 text-right tabular-nums" style={{ color: "#2f6f5c" }}>{formatInt(r.vendas)}</td>
+                    <td className="py-2 pl-3 text-right tabular-nums font-semibold" style={{ color: r.conv_pct >= 3 ? "#3ea98a" : "#e79a86" }}>{r.conv_pct}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
       )}
 
       {/* Melhores criativos e campanhas por leads */}
