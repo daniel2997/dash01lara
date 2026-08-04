@@ -4,13 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { LayoutDashboard, TrendingUp, BarChart2, Menu, X } from "lucide-react";
+import { LayoutDashboard, TrendingUp, BarChart2, FlaskConical, Menu, X } from "lucide-react";
 import { useLaunch } from "./LaunchContext";
 
 const NAV = [
   { href: "/", label: "Visão Geral", icon: LayoutDashboard },
   { href: "/funil", label: "Funil", icon: TrendingUp },
   { href: "/midia", label: "Mídia Paga", icon: BarChart2 },
+  { href: "/criativos", label: "Criativos", icon: FlaskConical },
 ];
 
 /** Marca — §3.1. O manuscrito rotacionado é assinatura, não decoração. */
