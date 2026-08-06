@@ -81,8 +81,9 @@ export const FUNIL: EtapaFunil[] = [
     tabela: "mlcaprovado",
     lancamentoCol: "lancamento",
     valorCol: "valor",
+    filtro: { col: "status", valor: "paid" },
     cor: "#075743",
-    disponivel: false,
+    disponivel: true,
     venda: true,
   },
 ];

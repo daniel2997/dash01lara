@@ -53,6 +53,8 @@ async function getEtapasViaDia(lancamento: string, dia: string) {
         return { ...base, total: kpis.grupos ?? 0, valor: 0 };
       case "workshop":
         return { ...base, total: kpis.compras ?? 0, valor: Number(kpis.total_receita) || 0 };
+      case "mentoria":
+        return { ...base, total: kpis.mentoria ?? 0, valor: Number(kpis.receita_mentoria) || 0 };
       default:
         return { ...base, total: 0, valor: 0 };
     }

@@ -37,7 +37,7 @@ interface AdsResp {
   melhoresCriativos: RankItem[];
 }
 interface DiarioResp {
-  dias: { dia: string; gasto: number; leads: number; privado: number; grupos: number; compras: number; receita: number }[];
+  dias: { dia: string; gasto: number; leads: number; privado: number; grupos: number; compras: number; receita: number; mentoria: number; receita_mentoria: number }[];
 }
 interface VendaRankItem {
   nome: string;
@@ -179,7 +179,7 @@ export default function Overview() {
         <KpiCard
           title="Receita"
           value={formatCurrency(receita)}
-          subtitle="Ingressos do workshop (mentoria em breve)"
+          subtitle="Workshop + Mentoria"
           color="#075743"
         />
         <KpiCard
@@ -264,6 +264,7 @@ export default function Overview() {
                   <th className="text-right py-2 px-3">Privado</th>
                   <th className="text-right py-2 px-3">Grupo</th>
                   <th className="text-right py-2 px-3">Compras</th>
+                  <th className="text-right py-2 px-3">Mentoria</th>
                   <th className="text-right py-2 pl-3">Receita</th>
                 </tr>
               </thead>
@@ -276,7 +277,8 @@ export default function Overview() {
                     <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: "#53a668" }}>{formatInt(d.privado)}</td>
                     <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: "#3ea98a" }}>{formatInt(d.grupos)}</td>
                     <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: "#2f6f5c" }}>{formatInt(d.compras)}</td>
-                    <td className="py-2.5 pl-3 text-right tabular-nums font-semibold" style={{ color: "#86e0a3" }}>{formatCurrency(d.receita)}</td>
+                    <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: "#075743" }}>{formatInt(d.mentoria || 0)}</td>
+                    <td className="py-2.5 pl-3 text-right tabular-nums font-semibold" style={{ color: "#86e0a3" }}>{formatCurrency(d.receita + (d.receita_mentoria || 0))}</td>
                   </tr>
                 ))}
                 <tr className="font-bold text-ink">
@@ -286,7 +288,8 @@ export default function Overview() {
                   <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: "#53a668" }}>{formatInt(diario.dias.reduce((s, d) => s + d.privado, 0))}</td>
                   <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: "#3ea98a" }}>{formatInt(diario.dias.reduce((s, d) => s + d.grupos, 0))}</td>
                   <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: "#2f6f5c" }}>{formatInt(diario.dias.reduce((s, d) => s + d.compras, 0))}</td>
-                  <td className="py-2.5 pl-3 text-right tabular-nums font-semibold" style={{ color: "#86e0a3" }}>{formatCurrency(diario.dias.reduce((s, d) => s + d.receita, 0))}</td>
+                  <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: "#075743" }}>{formatInt(diario.dias.reduce((s, d) => s + (d.mentoria || 0), 0))}</td>
+                  <td className="py-2.5 pl-3 text-right tabular-nums font-semibold" style={{ color: "#86e0a3" }}>{formatCurrency(diario.dias.reduce((s, d) => s + d.receita + (d.receita_mentoria || 0), 0))}</td>
                 </tr>
               </tbody>
             </table>
